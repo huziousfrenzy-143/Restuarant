@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #1B1D1F;
+  --color-graphite: #6B7178;
+  --color-mist: #E7E9EC;
+  --color-steel: #F6F7F8;
+  --color-surface: #FFFFFF;
+  --color-primary: #1F5C5B;
+  --color-primary-hover: #184645;
+  --color-success: #3E7A4C;
+  --color-warning: #D48A1E;
+  --color-danger: #C1440E;
+  --color-info: #4C6B8A;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Saffron SaaS Mobile",
+    "slug": "saffron-saas-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "sdkVersion": "52.0.0"
+  }
+}

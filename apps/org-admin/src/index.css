@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #1B1D1F;
+  --color-graphite: #6B7178;
+  --color-mist: #E7E9EC;
+  --color-steel: #F6F7F8;
+  --color-surface: #FFFFFF;
+  --color-primary: #1F5C5B;
+  --color-primary-hover: #184645;
+  --color-success: #3E7A4C;
+  --color-warning: #D48A1E;
+  --color-danger: #C1440E;
+  --color-info: #4C6B8A;
+}
+
+.line-mode {
+  --color-ink: #14161A;
+  --color-surface: #1E2125;
+  --color-graphite: #9BA3AF;
+  --color-mist: #2C3036;
+  --color-steel: #14161A;
+  --color-success: #4E9A60;
+  --color-warning: #EBB036;
+  --color-danger: #E0541C;
+  --color-info: #648BB3;
+  color-scheme: dark;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Touch manipulation & iOS Safe Area Inset Support */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbars for clean mobile pill sliders */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom scrollbars for high density desktop scanning */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-mist);
+  border-radius: 9999px;
+}
+.line-mode ::-webkit-scrollbar-thumb {
+  background: #2C3036;
+}

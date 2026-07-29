@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@restaurant-saas/shared-schemas": ["../../packages/shared-schemas/src/index.ts"],
+      "@restaurant-saas/ui": ["../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}
