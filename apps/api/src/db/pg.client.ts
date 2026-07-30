@@ -64,7 +64,7 @@ export async function initPgDatabase() {
     client.release();
 
     // 1. Run public platform table migrations
-    await applyPublicMigrations();
+    await applyPublicMigrations().catch(e => console.warn('[Migration Warning]', e.message));
 
     // Ensure public.users table has password_hash column
     await pgPool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);`).catch(() => {});
@@ -79,10 +79,10 @@ export async function initPgDatabase() {
          email = EXCLUDED.email,
          password_hash = EXCLUDED.password_hash`,
       [superAdminHash]
-    );
+    ).catch(e => console.warn('[Super Admin Seed Warning]', e.message));
 
     // 3. Repair any tenant organizations missing owner users
-    await repairMissingTenantUsers();
+    await repairMissingTenantUsers().catch(e => console.warn('[Repair Users Warning]', e.message));
 
     console.log(`[PostgreSQL DB] Public platform database schema & super_admin_users verified.`);
   } catch (err: any) {

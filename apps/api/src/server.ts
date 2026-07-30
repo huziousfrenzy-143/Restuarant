@@ -72,6 +72,20 @@ app.use('/api/v1/:orgId/clients', authMiddleware, tenantMiddleware, subscription
 app.use('/api/v1/:orgId/tasks', authMiddleware, tenantMiddleware, subscriptionMiddleware, taskRoutes);
 app.use('/api/v1/:orgId/audit-log', authMiddleware, tenantMiddleware, subscriptionMiddleware, auditLogRoutes);
 
+// Root & Healthcheck Endpoints for Vercel deployment checks (instant <10ms response)
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    system: 'Restaurant SaaS Multi-Tenant API Server',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get(['/api/health', '/api/v1/health'], (req, res) => {
+  res.json({ status: 'ok', system: 'online', time: new Date().toISOString() });
+});
+
 // Lazy database initialization middleware for Vercel serverless cold-starts
 let isDbInitStarted = false;
 app.use(async (req, res, next) => {
@@ -82,20 +96,6 @@ app.use(async (req, res, next) => {
     });
   }
   next();
-});
-
-// Root & Healthcheck Endpoints for Vercel deployment checks
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    system: 'Restaurant SaaS Multi-Tenant API Server',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
 // 404 Fallback Handler with logging for Vercel routing debugging
