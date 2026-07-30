@@ -1,9 +1,14 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { OrderStatus, InventoryStatus, SubscriptionStatus } from '@restaurant-saas/shared-schemas';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+export function cn(...inputs: any[]): string {
+  try {
+    const clsxLib = require('clsx');
+    const twMergeLib = require('tailwind-merge');
+    const clsxFn = clsxLib.clsx || clsxLib;
+    return twMergeLib.twMerge(clsxFn(...inputs));
+  } catch (_) {
+    return inputs.flat(Infinity).filter(Boolean).join(' ');
+  }
 }
 
 // Currency formatter using JetBrains Mono / tabular-nums
