@@ -101,6 +101,19 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// URL Path Normalizer & Trailing Slash/Backslash Safety
+app.use((req, res, next) => {
+  try {
+    if (req.url && req.url.length > 1 && (req.url.endsWith('/') || req.url.endsWith('\\'))) {
+      req.url = req.url.replace(/[/\\]+$/, '');
+      if (req.url === '') req.url = '/';
+    }
+    next();
+  } catch (_) {
+    next();
+  }
+});
+
 // 404 Fallback Handler with logging for Vercel routing debugging
 app.use((req, res) => {
   console.log(`[API 404 Not Found] Method: ${req.method} | Path: ${req.path} | OriginalUrl: ${req.originalUrl}`);
@@ -108,6 +121,21 @@ app.use((req, res) => {
     error: {
       code: 'NOT_FOUND',
       message: `Cannot ${req.method} ${req.originalUrl || req.path}`,
+      path: req.originalUrl || req.path
+    }
+  });
+});
+
+// Global Express Error Handler (Prevents serverless function invocation 500 crashes)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[API Internal Server Error]:', err?.stack || err?.message || err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err?.status || 500).json({
+    error: {
+      code: err?.code || 'INTERNAL_SERVER_ERROR',
+      message: err?.message || 'An unexpected server error occurred',
       path: req.originalUrl || req.path
     }
   });
