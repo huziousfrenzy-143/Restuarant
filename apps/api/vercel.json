@@ -1,22 +1,10 @@
 {
   "version": 2,
   "buildCommand": "cd ../.. && npm run vercel-build",
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "../../packages/shared-schemas/dist/**",
-          "../../packages/ui/dist/**"
-        ]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "dist/server.js"
+      "source": "/(.*)",
+      "destination": "/api/index.js"
     }
   ]
 }

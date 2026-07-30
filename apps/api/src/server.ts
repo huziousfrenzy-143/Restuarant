@@ -98,6 +98,18 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// 404 Fallback Handler with logging for Vercel routing debugging
+app.use((req, res) => {
+  console.log(`[API 404 Not Found] Method: ${req.method} | Path: ${req.path} | OriginalUrl: ${req.originalUrl}`);
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: `Cannot ${req.method} ${req.originalUrl || req.path}`,
+      path: req.originalUrl || req.path
+    }
+  });
+});
+
 // Standalone Server Boot for Local/Docker environment
 if (!process.env.VERCEL) {
   initPgDatabase().then(() => {
