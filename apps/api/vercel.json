@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "cd ../.. && npm run vercel-build",
+  "buildCommand": "cd ../.. && npm run build:shared",
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/index.js"
+      "destination": "/api/index.ts"
     }
   ]
 }
