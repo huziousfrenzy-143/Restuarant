@@ -41,6 +41,22 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// ----------------------------------------------------
+// SYSTEM HEALTHCHECK & ROOT ENDPOINTS (Instant Response < 5ms)
+// ----------------------------------------------------
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    system: 'Restaurant SaaS Multi-Tenant API Server',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get(['/health', '/api/health', '/api/v1/health'], (req, res) => {
+  res.json({ status: 'ok', system: 'online', time: new Date().toISOString() });
+});
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -62,7 +78,8 @@ app.use('/api/v1', uploadRoutes);
 // ----------------------------------------------------
 app.use('/api/v1/:orgId/settings', authMiddleware, tenantMiddleware, subscriptionMiddleware, tenantSettingsRoutes);
 app.use('/api/v1/:orgId/users', authMiddleware, tenantMiddleware, subscriptionMiddleware, userRoutes);
-app.use('/api/v1/:orgId', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
+app.use('/api/v1/:orgId/products', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
+app.use('/api/v1/:orgId/categories', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
 app.use('/api/v1/:orgId/inventory', authMiddleware, tenantMiddleware, subscriptionMiddleware, inventoryRoutes);
 app.use('/api/v1/:orgId/orders', authMiddleware, tenantMiddleware, subscriptionMiddleware, orderRoutes);
 app.use('/api/v1/:orgId/sales', authMiddleware, tenantMiddleware, subscriptionMiddleware, saleRoutes);
@@ -71,20 +88,6 @@ app.use('/api/v1/:orgId/ledger', authMiddleware, tenantMiddleware, subscriptionM
 app.use('/api/v1/:orgId/clients', authMiddleware, tenantMiddleware, subscriptionMiddleware, clientRoutes);
 app.use('/api/v1/:orgId/tasks', authMiddleware, tenantMiddleware, subscriptionMiddleware, taskRoutes);
 app.use('/api/v1/:orgId/audit-log', authMiddleware, tenantMiddleware, subscriptionMiddleware, auditLogRoutes);
-
-// Root & Healthcheck Endpoints for Vercel deployment checks (instant <10ms response)
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    system: 'Restaurant SaaS Multi-Tenant API Server',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get(['/api/health', '/api/v1/health'], (req, res) => {
-  res.json({ status: 'ok', system: 'online', time: new Date().toISOString() });
-});
 
 // Lazy database initialization middleware for Vercel serverless cold-starts
 let isDbInitStarted = false;
