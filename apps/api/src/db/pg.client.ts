@@ -57,6 +57,11 @@ export async function repairMissingTenantUsers() {
 }
 
 export async function initPgDatabase() {
+  if (process.env.VERCEL && (!process.env.DATABASE_URL || connectionString.includes('localhost'))) {
+    console.warn('[Vercel DB Notice] DATABASE_URL env var not configured in Vercel dashboard. Skipping DB auto-connect.');
+    return;
+  }
+
   try {
     const client = await pgPool.connect();
     console.log(`[PostgreSQL DB] Connected successfully using DATABASE_URL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
