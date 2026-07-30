@@ -9,7 +9,7 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@restaurant-saas/shared-schemas": "*",
+    "@restaurant-saas/shared-schemas": "file:../../packages/shared-schemas",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "npm run vercel-build",
+  "builds": [
+    {
+      "src": "apps/api/dist/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "packages/shared-schemas/dist/**",
+          "packages/ui/dist/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "apps/api/dist/server.js"
+    }
+  ]
+}

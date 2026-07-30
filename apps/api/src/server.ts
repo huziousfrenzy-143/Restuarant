@@ -72,14 +72,41 @@ app.use('/api/v1/:orgId/clients', authMiddleware, tenantMiddleware, subscription
 app.use('/api/v1/:orgId/tasks', authMiddleware, tenantMiddleware, subscriptionMiddleware, taskRoutes);
 app.use('/api/v1/:orgId/audit-log', authMiddleware, tenantMiddleware, subscriptionMiddleware, auditLogRoutes);
 
-// Instant Server Boot (Database connection initialized without loading full data upfront)
-async function startServer() {
-  await initPgDatabase();
+// Lazy database initialization middleware for Vercel serverless cold-starts
+let isDbInitStarted = false;
+app.use(async (req, res, next) => {
+  if (!isDbInitStarted) {
+    isDbInitStarted = true;
+    initPgDatabase().catch(err => {
+      console.warn('[Vercel DB Init Warning]:', err?.message);
+    });
+  }
+  next();
+});
 
-  app.listen(PORT, () => {
-    console.log(`[Restaurant SaaS Modular API] Server active on http://localhost:${PORT}`);
-    console.log(`[Cloudinary Integration] Cloud name: ${process.env.CLOUDINARY_CLOUD_NAME || 'dvucauhqo'}`);
+// Root & Healthcheck Endpoints for Vercel deployment checks
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    system: 'Restaurant SaaS Multi-Tenant API Server',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// Standalone Server Boot for Local/Docker environment
+if (!process.env.VERCEL) {
+  initPgDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`[Restaurant SaaS Modular API] Server active on http://localhost:${PORT}`);
+      console.log(`[Cloudinary Integration] Cloud name: ${process.env.CLOUDINARY_CLOUD_NAME || 'dvucauhqo'}`);
+    });
   });
 }
 
-startServer();
+export default app;
+module.exports = app;

@@ -7,7 +7,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@restaurant-saas/shared-schemas": "*",
+    "@restaurant-saas/shared-schemas": "file:../shared-schemas",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0"
   },
