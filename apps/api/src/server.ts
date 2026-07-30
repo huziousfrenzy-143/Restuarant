@@ -128,7 +128,7 @@ app.use((req, res) => {
 
 // Global Express Error Handler (Prevents serverless function invocation 500 crashes)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('[API Internal Server Error]:', err?.stack || err?.message || err);
+  console.error('[API Error]:', err?.message || 'Server Error');
   if (res.headersSent) {
     return next(err);
   }

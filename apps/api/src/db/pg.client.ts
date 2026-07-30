@@ -64,7 +64,7 @@ export async function initPgDatabase() {
 
   try {
     const client = await pgPool.connect();
-    console.log(`[PostgreSQL DB] Connected successfully using DATABASE_URL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
+    console.log('[PostgreSQL DB] Connected successfully.');
     isPgConnected = true;
     client.release();
 
