@@ -134,7 +134,7 @@ export class OrganizationService {
     ).catch(() => {});
 
     // 5. Send Onboarding Email with Login Link & Generated Password
-    const loginUrl = process.env.ORG_ADMIN_URL || 'http://localhost:3000';
+    const loginUrl = process.env.ORG_ADMIN_URL || 'https://restuarants-org-admin.vercel.app';
     if (ownerEmail && tempOwnerPassword) {
       await sendOwnerOnboardingEmail(
         ownerEmail,
@@ -146,6 +146,18 @@ export class OrganizationService {
     }
 
     return { org: organization, tempOwnerPassword };
+  }
+
+  static async deleteOrganization(id: string) {
+    const success = await OrganizationRepository.delete(id);
+    if (success) {
+      await pgPool.query(
+        `INSERT INTO public.platform_audit_log (id, user_id, user_name, action, entity, entity_id, details)
+         VALUES ($1, 'usr-super-admin', 'Super Admin', 'ORGANIZATION_DELETED', 'organization', $2, $3::jsonb)`,
+        [`aud-${Date.now()}`, id, JSON.stringify({ deleted_at: new Date().toISOString() })]
+      ).catch(() => {});
+    }
+    return success;
   }
 
   static async updateOrganization(id: string, updates: any) {

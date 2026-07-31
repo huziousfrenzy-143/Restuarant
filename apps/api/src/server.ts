@@ -25,9 +25,29 @@ import { initPgDatabase } from './db/pg.client';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// CORS Preflight & Headers Configuration
-const corsOptions = {
-  origin: true,
+// CORS Preflight & Headers Configuration for Org Admin, Super Admin & Mobile Apps
+const allowedOrigins = [
+  process.env.ORG_ADMIN_URL || 'https://restuarants-org-admin.vercel.app',
+  process.env.SUPER_ADMIN_URL || 'https://restuarants-super-admin.vercel.app',
+  'https://restuarants-org-admin.vercel.app',
+  'https://restuarants-super-admin.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:8081',
+  'http://localhost:19006'
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like Expo, React Native, Mobile Apps, cURL, Postman)
+    if (!origin || origin === 'null') {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Org-Id']

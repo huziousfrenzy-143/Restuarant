@@ -150,4 +150,17 @@ export class OrganizationRepository {
     );
     return res.rows[0];
   }
+
+  static async delete(id: string): Promise<boolean> {
+    const org = await this.findById(id);
+    if (!org) return false;
+
+    if (org.schema_name) {
+      await pgPool.query(`DROP SCHEMA IF EXISTS "${org.schema_name}" CASCADE;`).catch(e => console.warn('[Drop Schema Notice]', e.message));
+    }
+
+    await pgPool.query(`DELETE FROM public.users WHERE org_id = $1;`, [id]).catch(() => {});
+    const res = await pgPool.query(`DELETE FROM public.organizations WHERE id = $1;`, [id]);
+    return (res.rowCount || 0) > 0;
+  }
 }

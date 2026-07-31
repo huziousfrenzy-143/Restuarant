@@ -1,7 +1,7 @@
 // Production React Native Mobile API Client for Saffron SaaS Backend
 import { Product, Order, InventoryItem, OrderStatus, Client, ProductCategory } from '@restaurant-saas/shared-schemas';
 
-export const API_BASE_URL = 'http://localhost:4000/api/v1';
+export const API_BASE_URL = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL : 'https://restuarants-api.vercel.app/api/v1').replace(/\/$/, '');
 
 let authToken: string | null = null;
 

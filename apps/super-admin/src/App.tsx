@@ -12,7 +12,8 @@ import {
   Edit2,
   Power,
   X,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 export function App() {
@@ -33,6 +34,7 @@ export function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [selectedOrgForExtension, setSelectedOrgForExtension] = useState<Organization | null>(null);
+  const [deletingOrg, setDeletingOrg] = useState<Organization | null>(null);
 
   // New Org Form State
   const [newOrgForm, setNewOrgForm] = useState({
@@ -243,6 +245,33 @@ export function App() {
     }
   };
 
+  // 5. Delete Organization Handler
+  const handleDeleteOrganization = async () => {
+    if (!deletingOrg) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('super_admin_token');
+      const res = await fetch(`${API_BASE_URL}/organizations/${deletingOrg.id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (res.ok) {
+        setDeletingOrg(null);
+        setFeedbackMsg({ type: 'success', msg: `Organization '${deletingOrg.name}' permanently deleted.` });
+        await fetchOrganizations();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setFeedbackMsg({ type: 'error', msg: json.error?.message || 'Failed to delete organization' });
+      }
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', msg: err.message || 'Error deleting organization' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredOrgs = organizations.filter(o =>
     o.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     o.schema_name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -429,6 +458,15 @@ export function App() {
                               className="px-2.5 py-1 rounded bg-primary text-white text-[11px] font-bold font-mono hover:bg-primary-hover shadow-sm"
                             >
                               Extend
+                            </button>
+
+                            {/* Delete Organization */}
+                            <button
+                              onClick={() => setDeletingOrg(org)}
+                              title="Delete Organization"
+                              className="p-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -767,6 +805,52 @@ export function App() {
               >
                 {isSubmitting ? 'Extending...' : 'Confirm Extension'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Organization Confirmation Modal */}
+      {deletingOrg && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border-2 border-red-500 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-4 bg-red-50 border-b border-red-200 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-red-700 font-bold text-sm font-mono">
+                <Trash2 className="w-5 h-5" />
+                <span>Delete Organization</span>
+              </div>
+              <button onClick={() => setDeletingOrg(null)} className="text-graphite hover:text-ink">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 font-sans text-xs">
+              <p className="text-graphite">
+                Are you sure you want to permanently delete organization <strong className="text-ink font-bold">{deletingOrg.name}</strong>?
+              </p>
+              <div className="p-3 bg-steel rounded-md border border-mist font-mono space-y-1">
+                <div><span className="text-graphite">Schema:</span> <strong className="text-primary">{deletingOrg.schema_name}</strong></div>
+                <div><span className="text-graphite">ID:</span> <strong className="text-ink">{deletingOrg.id}</strong></div>
+              </div>
+              <p className="text-red-600 font-bold">
+                ⚠️ WARNING: This action cannot be undone. The database schema and all associated tenant data will be permanently purged.
+              </p>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingOrg(null)}
+                  className="flex-1 py-2.5 rounded border border-mist text-graphite font-bold hover:bg-steel font-mono"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleDeleteOrganization}
+                  className="flex-1 py-2.5 rounded bg-red-600 text-white font-bold hover:bg-red-700 shadow font-mono disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Deleting...' : 'Permanently Delete'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

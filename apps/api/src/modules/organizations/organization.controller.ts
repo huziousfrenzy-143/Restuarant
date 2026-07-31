@@ -68,4 +68,12 @@ export class OrganizationController {
 
     res.json({ data: updated, message: 'Subscription successfully extended' });
   }
+
+  static async delete(req: Request, res: Response) {
+    const success = await OrganizationService.deleteOrganization(req.params.id);
+    if (!success) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Organization not found or already deleted' } });
+    }
+    res.json({ message: 'Organization permanently removed' });
+  }
 }

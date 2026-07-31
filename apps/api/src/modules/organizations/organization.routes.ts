@@ -12,6 +12,7 @@ router.get('/:id', OrganizationController.getById);
 router.post('/', OrganizationController.create);
 router.put('/:id', OrganizationController.update);
 router.patch('/:id/status', OrganizationController.toggleStatus);
+router.delete('/:id', OrganizationController.delete);
 router.post('/extend-subscription', OrganizationController.extendSubscription);
 
 export default router;
