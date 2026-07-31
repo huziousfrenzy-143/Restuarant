@@ -78,8 +78,7 @@ app.use('/api/v1', uploadRoutes);
 // ----------------------------------------------------
 app.use('/api/v1/:orgId/settings', authMiddleware, tenantMiddleware, subscriptionMiddleware, tenantSettingsRoutes);
 app.use('/api/v1/:orgId/users', authMiddleware, tenantMiddleware, subscriptionMiddleware, userRoutes);
-app.use('/api/v1/:orgId/products', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
-app.use('/api/v1/:orgId/categories', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
+app.use('/api/v1/:orgId', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
 app.use('/api/v1/:orgId/inventory', authMiddleware, tenantMiddleware, subscriptionMiddleware, inventoryRoutes);
 app.use('/api/v1/:orgId/orders', authMiddleware, tenantMiddleware, subscriptionMiddleware, orderRoutes);
 app.use('/api/v1/:orgId/sales', authMiddleware, tenantMiddleware, subscriptionMiddleware, saleRoutes);
