@@ -14,9 +14,25 @@ export interface AuthenticatedRequest extends Request {
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-saas-jwt-key-2026';
 
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
+  let token: string | undefined;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.cookies && (req.cookies.org_admin_token || req.cookies.super_admin_token || req.cookies.token)) {
+    token = req.cookies.org_admin_token || req.cookies.super_admin_token || req.cookies.token;
+  } else if (req.headers.cookie) {
+    const rawCookies = req.headers.cookie.split(';');
+    for (const c of rawCookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === 'org_admin_token' || k === 'super_admin_token' || k === 'token') {
+        token = decodeURIComponent(v);
+        break;
+      }
+    }
+  }
+
+  if (!token) {
     return res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
@@ -24,8 +40,6 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
       }
     });
   }
-
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     req.user = decoded;

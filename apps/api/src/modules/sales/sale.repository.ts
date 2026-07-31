@@ -74,11 +74,13 @@ export class SaleRepository {
       );
     }
 
-    // Update order status to completed
-    await client.query(
-      `UPDATE orders SET status = 'completed', updated_at = NOW() WHERE id = $1`,
-      [payload.order_id]
-    );
+    // If explicitly requested, update order status
+    if (payload.mark_completed) {
+      await client.query(
+        `UPDATE orders SET status = 'completed', updated_at = NOW() WHERE id = $1`,
+        [payload.order_id]
+      );
+    }
 
     return sale;
   }

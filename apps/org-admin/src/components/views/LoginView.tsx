@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Mail, ArrowRight, CheckCircle2, Sparkles, Utensils } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
+import { saveAuthToken } from '../../utils/cookieUtils';
 
 interface LoginViewProps {
   onLoginSuccess: (user: any, accessToken: string, refreshToken: string) => void;
@@ -66,10 +67,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         throw new Error(json.error?.message || 'Invalid or expired OTP code');
       }
 
+      const accessToken = json.data.accessToken || 'demo-access-token';
+      const refreshToken = json.data.refreshToken || 'demo-refresh-token';
+
+      saveAuthToken(accessToken, refreshToken, json.data.user);
+
       onLoginSuccess(
         json.data.user,
-        json.data.accessToken || 'demo-access-token',
-        json.data.refreshToken || 'demo-refresh-token'
+        accessToken,
+        refreshToken
       );
     } catch (err: any) {
       setErrorMsg(err.message || 'OTP verification failed');

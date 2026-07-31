@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoginView } from './components/views/LoginView';
-import { API_BASE_URL } from './config/api';
+import { useAppStore } from './store/useAppStore';
 
 import { OwnerOverview } from './components/views/OwnerOverview';
 import { POSView } from './components/views/POSView';
@@ -12,251 +12,164 @@ import { InventoryView } from './components/views/InventoryView';
 import { SalesView } from './components/views/SalesView';
 import { LedgerView } from './components/views/LedgerView';
 import { ProductsView } from './components/views/ProductsView';
-import { ClientsView } from './components/views/ClientsView';
+import { ClientsView } from './features/clients/ClientsView';
 import { TasksView } from './components/views/TasksView';
 import { ReportsView } from './components/views/ReportsView';
 import { SettingsView } from './components/views/SettingsView';
 
-import { Order, OrderItem, OrderStatus, Product, InventoryItem, Sale, LedgerAccount, LedgerEntry, Task, Client, Organization, User, ProductCategory, PaymentMethod } from '@restaurant-saas/shared-schemas';
-
+import { Loader2 } from 'lucide-react';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
+import { API_BASE_URL } from './config/api';
+
+import {
+  useClientsQuery,
+  useAddClientMutation,
+  useUpdateClientMutation,
+  useDeleteClientMutation,
+  usePayCreditMutation
+} from './features/clients/useClientsQuery';
+
+import {
+  useProductsQuery,
+  useCategoriesQuery,
+  useAddProductMutation,
+  useUpdateProductMutation,
+  useDeleteProductMutation,
+  useAddCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation
+} from './features/products/useProductsQuery';
+
+import {
+  useInventoryQuery,
+  useAddInventoryMutation,
+  useUpdateInventoryMutation,
+  useDeleteInventoryMutation
+} from './features/inventory/useInventoryQuery';
+
+import {
+  useOrdersQuery,
+  useCreateOrderMutation,
+  useUpdateOrderStatusMutation,
+  useUpdateOrderItemsMutation
+} from './features/orders/useOrdersQuery';
+
+import {
+  useSalesQuery,
+  useCreateSaleMutation
+} from './features/sales/useSalesQuery';
+
+import {
+  useTasksQuery,
+  useUsersQuery,
+  useAddTaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+  useToggleTaskStatusMutation,
+  useAddUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation
+} from './features/tasks/useTasksQuery';
+
+import {
+  usePaymentMethodsQuery,
+  useAddPaymentMethodMutation,
+  useUpdatePaymentMethodMutation,
+  useDeletePaymentMethodMutation,
+  useUpdateSettingsMutation
+} from './features/settings/useSettingsQuery';
+
+import {
+  useLedgerAccountsQuery,
+  useLedgerEntriesQuery,
+  useAddAccountMutation,
+  useUpdateAccountMutation,
+  useDeleteAccountMutation,
+  useAddEntryMutation
+} from './features/ledger/useLedgerQuery';
 
 export function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return Boolean(localStorage.getItem('org_admin_token'));
-  });
 
-  const [currentUser, setCurrentUser] = useState<any>(() => {
-    const saved = localStorage.getItem('org_admin_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  // Zustand Store Selectors for Local Session State
+  const {
+    isAuthenticated,
+    currentUser,
+    org,
+    userOrgs,
+    activeTab,
+    isLineMode,
+    isActionLoading,
+    actionMessage,
+    setIsAuthenticated,
+    setCurrentUser,
+    setOrg,
+    setUserOrgs,
+    setActiveTab,
+    setIsLineMode,
+    runAction,
+    logout
+  } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [isLineMode, setIsLineMode] = useState<boolean>(false);
+  const orgId = org?.id || 'org-1';
 
-  // Dynamic Organization State from API
-  const [org, setOrg] = useState<Organization>(() => {
-    return currentUser?.org || {
-      id: 'org-1',
-      name: 'Restaurant SaaS',
-      slug: 'restaurant-saas',
-      schema_name: 'tenant_restaurant_saas',
-      subscription_status: 'active',
-      subscription_expires_at: new Date(Date.now() + 45 * 86400000).toISOString(),
-      plan_type: 'pro',
-      tax_rate: 10,
-      address: 'Main Boulevard',
-      phone: '+1 (555) 000-0000',
-      created_at: new Date().toISOString(),
-      is_active: true
-    };
-  });
+  // TanStack Query Server States & Mutations per Feature
+  const { data: clients = [], refetch: refetchClients } = useClientsQuery(orgId);
+  const { data: products = [] } = useProductsQuery(orgId);
+  const { data: categories = [] } = useCategoriesQuery(orgId);
+  const { data: inventory = [] } = useInventoryQuery(orgId);
+  const { data: orders = [] } = useOrdersQuery(orgId);
+  const { data: sales = [], refetch: refetchSales } = useSalesQuery(orgId);
+  const { data: users = [] } = useUsersQuery(orgId);
+  const { data: tasks = [] } = useTasksQuery(orgId);
+  const { data: paymentMethods = [] } = usePaymentMethodsQuery(orgId);
+  const { data: accounts = [] } = useLedgerAccountsQuery(orgId);
+  const { data: entries = [] } = useLedgerEntriesQuery(orgId);
 
-  // Pure API-Driven State
-  const [users, setUsers] = useState<User[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [movements, setMovements] = useState([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  // TanStack Mutations
+  const addClientMut = useAddClientMutation(orgId);
+  const updateClientMut = useUpdateClientMutation(orgId);
+  const deleteClientMut = useDeleteClientMutation(orgId);
+  const payCreditMut = usePayCreditMutation(orgId);
 
-  // Multi-Tenant User Organizations List
-  const [userOrgs, setUserOrgs] = useState<any[]>(() => {
-    return currentUser?.userOrgs || [org];
-  });
+  const addProductMut = useAddProductMutation(orgId);
+  const updateProductMut = useUpdateProductMutation(orgId);
+  const deleteProductMut = useDeleteProductMutation(orgId);
+  const addCategoryMut = useAddCategoryMutation(orgId);
+  const updateCategoryMut = useUpdateCategoryMutation(orgId);
+  const deleteCategoryMut = useDeleteCategoryMutation(orgId);
 
-  const handleLogout = () => {
-    localStorage.removeItem('org_admin_token');
-    localStorage.removeItem('org_admin_refresh_token');
-    localStorage.removeItem('org_admin_user');
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-  };
+  const addInventoryMut = useAddInventoryMutation(orgId);
+  const updateInventoryMut = useUpdateInventoryMutation(orgId);
+  const deleteInventoryMut = useDeleteInventoryMutation(orgId);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('org_admin_token');
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    };
-  };
+  const createOrderMut = useCreateOrderMutation(orgId);
+  const updateOrderStatusMut = useUpdateOrderStatusMutation(orgId);
+  const updateOrderItemsMut = useUpdateOrderItemsMutation(orgId);
+  const createSaleMut = useCreateSaleMutation(orgId);
 
-  // Switch Organization Context
-  const handleSwitchOrg = async (targetOrgId: string) => {
-    try {
-      const token = localStorage.getItem('org_admin_token');
-      const res = await fetch(`${API_BASE_URL}/auth/switch-org`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ targetOrgId })
-      });
+  const addTaskMut = useAddTaskMutation(orgId);
+  const updateTaskMut = useUpdateTaskMutation(orgId);
+  const deleteTaskMut = useDeleteTaskMutation(orgId);
+  const toggleTaskMut = useToggleTaskStatusMutation(orgId);
 
-      const json = await res.json();
-      if (!res.ok) {
-        alert(json.error?.message || 'Failed to switch organization context');
-        return;
-      }
+  const addUserMut = useAddUserMutation(orgId);
+  const updateUserMut = useUpdateUserMutation(orgId);
+  const deleteUserMut = useDeleteUserMutation(orgId);
 
-      if (json.data) {
-        const { accessToken, refreshToken, user, userOrgs: newOrgs } = json.data;
-        if (accessToken) localStorage.setItem('org_admin_token', accessToken);
-        if (refreshToken) localStorage.setItem('org_admin_refresh_token', refreshToken);
-        if (user) {
-          localStorage.setItem('org_admin_user', JSON.stringify(user));
-          setCurrentUser(user);
-          if (user.org) setOrg(user.org);
+  const addPaymentMethodMut = useAddPaymentMethodMutation(orgId);
+  const updatePaymentMethodMut = useUpdatePaymentMethodMutation(orgId);
+  const deletePaymentMethodMut = useDeletePaymentMethodMutation(orgId);
+  const updateSettingsMut = useUpdateSettingsMutation(orgId);
 
-          if (user.role === 'chef') {
-            setActiveTab('kds');
-            setIsLineMode(true);
-          } else if (user.role === 'salesman') {
-            setActiveTab('pos');
-            setIsLineMode(false);
-          } else if (user.role === 'delivery_boy') {
-            setActiveTab('orders');
-            setIsLineMode(false);
-          } else {
-            setActiveTab('dashboard');
-            setIsLineMode(false);
-          }
-        }
-        if (newOrgs) setUserOrgs(newOrgs);
+  const addAccountMut = useAddAccountMutation(orgId);
+  const updateAccountMut = useUpdateAccountMutation(orgId);
+  const deleteAccountMut = useDeleteAccountMutation(orgId);
+  const addEntryMut = useAddEntryMutation(orgId);
 
-        // Instantly reload all store data for newly targeted organization!
-        await syncApiData(targetOrgId);
-      }
-    } catch (err: any) {
-      console.error('Error switching organization:', err);
-    }
-  };
-
-  // Sync API Data on authenticated load using /api/v1/:orgId/<feature> pattern
-  const syncApiData = async (targetOrgId?: string) => {
-    const activeOrgId = targetOrgId || org.id;
-    if (!activeOrgId) return;
-
-    try {
-      const token = localStorage.getItem('org_admin_token');
-      if (!token) {
-        setIsAuthenticated(false);
-        return;
-      }
-
-      const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-      const baseUrl = `${API_BASE_URL}/${activeOrgId}`;
-
-      const [usersRes, prodRes, catRes, invRes, cliRes, ordRes, salesRes, pmRes, accRes, entRes, tskRes] = await Promise.all([
-        fetch(`${baseUrl}/users`, { headers }),
-        fetch(`${baseUrl}/products`, { headers }),
-        fetch(`${baseUrl}/categories`, { headers }),
-        fetch(`${baseUrl}/inventory`, { headers }),
-        fetch(`${baseUrl}/clients`, { headers }),
-        fetch(`${baseUrl}/orders`, { headers }),
-        fetch(`${baseUrl}/sales`, { headers }),
-        fetch(`${baseUrl}/payment-methods`, { headers }),
-        fetch(`${baseUrl}/ledger/accounts`, { headers }),
-        fetch(`${baseUrl}/ledger/entries`, { headers }),
-        fetch(`${baseUrl}/tasks`, { headers })
-      ]);
-
-      if (usersRes.status === 401 || ordRes.status === 401 || prodRes.status === 401) {
-        console.warn('Session expired or unauthorized token. Logging out.');
-        handleLogout();
-        return;
-      }
-
-      if (usersRes.ok) {
-        const json = await usersRes.json();
-        if (json.data) setUsers(json.data);
-      }
-      if (prodRes.ok) {
-        const json = await prodRes.json();
-        if (json.data) setProducts(json.data);
-      }
-      if (catRes.ok) {
-        const json = await catRes.json();
-        if (json.data) setCategories(json.data);
-      }
-      if (invRes.ok) {
-        const json = await invRes.json();
-        if (json.data) setInventory(json.data);
-      }
-      if (cliRes.ok) {
-        const json = await cliRes.json();
-        if (json.data) setClients(json.data);
-      }
-      if (ordRes.ok) {
-        const json = await ordRes.json();
-        if (json.data) setOrders(json.data);
-      }
-      if (salesRes.ok) {
-        const json = await salesRes.json();
-        if (json.data) setSales(json.data);
-      }
-      if (pmRes.ok) {
-        const json = await pmRes.json();
-        if (json.data) setPaymentMethods(json.data);
-      }
-      if (accRes.ok) {
-        const json = await accRes.json();
-        if (json.data) setAccounts(json.data);
-      }
-      if (entRes.ok) {
-        const json = await entRes.json();
-        if (json.data) setEntries(json.data);
-      }
-      if (tskRes.ok) {
-        const json = await tskRes.json();
-        if (json.data) setTasks(json.data);
-      }
-    } catch (err) {
-      console.error('Error syncing multi-tenant organization API data:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && org.id) {
-      syncApiData(org.id);
-    }
-  }, [isAuthenticated, org.id]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    if (currentUser.role === 'chef') {
-      setActiveTab('kds');
-      setIsLineMode(true);
-    } else if (currentUser.role === 'salesman') {
-      if (activeTab === 'kds' || activeTab === 'dashboard') setActiveTab('pos');
-      setIsLineMode(false);
-    } else if (currentUser.role === 'delivery_boy') {
-      if (activeTab === 'kds' || activeTab === 'dashboard') setActiveTab('orders');
-      setIsLineMode(false);
-    } else {
-      if (activeTab === 'kds') setActiveTab('dashboard');
-      setIsLineMode(false);
-    }
-  }, [currentUser?.role, currentUser?.org?.id]);
-
-  // Auth Handlers & Role Redirection
-  const handleLoginSuccess = (user: any, token: string, refresh: string) => {
-    localStorage.setItem('org_admin_token', token);
-    localStorage.setItem('org_admin_refresh_token', refresh);
-    localStorage.setItem('org_admin_user', JSON.stringify(user));
+  const handleLoginSuccess = (user: any) => {
     setCurrentUser(user);
-    if (user.org) {
-      setOrg(user.org);
-      syncApiData(user.org.id);
-    }
+    if (user.org) setOrg(user.org);
     if (user.userOrgs && Array.isArray(user.userOrgs)) {
       setUserOrgs(user.userOrgs);
     } else if (user.org) {
@@ -280,300 +193,45 @@ export function App() {
     setIsAuthenticated(true);
   };
 
-  // --- CRUD HANDLERS ---
-
-  // Products CRUD
-  const handleAddProduct = async (newProdInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/products`, {
+  const handleSwitchOrg = async (targetOrgId: string) => {
+    await runAction('Switching Organization...', async () => {
+      const token = localStorage.getItem('org_admin_token');
+      const res = await fetch(`${API_BASE_URL}/auth/switch-org`, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newProdInput)
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ targetOrgId })
       });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding product:', err); }
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error?.message || 'Failed to switch organization context');
+        return;
+      }
+
+      if (json.data) {
+        const { accessToken, refreshToken, user, userOrgs: newOrgs } = json.data;
+        if (accessToken) localStorage.setItem('org_admin_token', accessToken);
+        if (refreshToken) localStorage.setItem('org_admin_refresh_token', refreshToken);
+        if (user) {
+          localStorage.setItem('org_admin_user', JSON.stringify(user));
+          setCurrentUser(user);
+          if (user.org) setOrg(user.org);
+        }
+        if (newOrgs) setUserOrgs(newOrgs);
+      }
+    });
   };
 
-  const handleUpdateProduct = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/products/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating product:', err); }
-  };
-
-  const handleDeleteProduct = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/products/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting product:', err); }
-  };
-
-  // Categories CRUD
-  const handleAddCategory = async (newCatInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/categories`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newCatInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding category:', err); }
-  };
-
-  const handleUpdateCategory = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/categories/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating category:', err); }
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/categories/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting category:', err); }
-  };
-
-  // Inventory CRUD
-  const handleAddInventoryItem = async (newItemInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/inventory`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newItemInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding inventory item:', err); }
-  };
-
-  const handleUpdateInventoryItem = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/inventory/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating inventory item:', err); }
-  };
-
-  const handleDeleteInventoryItem = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/inventory/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting inventory item:', err); }
-  };
-
-  // Clients CRUD
-  const handleAddClient = async (newClientInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/clients`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newClientInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding client:', err); }
-  };
-
-  const handleUpdateClient = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/clients/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating client:', err); }
-  };
-
-  const handleDeleteClient = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/clients/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting client:', err); }
-  };
-
-  const handlePayCreditBalance = async (clientId: string, amount: number, paymentMethod: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/clients/${clientId}/pay-credit`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ amount, payment_method: paymentMethod })
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) {
-      console.error('Error paying credit balance:', err);
-    }
-  };
-
-  // Tasks & Staff Users CRUD
-  const handleAddUser = async (newUserInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/users`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newUserInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding user:', err); }
-  };
-
-  const handleUpdateUser = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/users/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating user:', err); }
-  };
-
-  const handleDeleteUser = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/users/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting user:', err); }
-  };
-
-  const handleAddTask = async (newTaskInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/tasks`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(newTaskInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding task:', err); }
-  };
-
-  const handleUpdateTask = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/tasks/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating task:', err); }
-  };
-
-  const handleDeleteTask = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/tasks/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting task:', err); }
-  };
-
-  // Payment Methods CRUD
-  const handleAddPaymentMethod = async (pmInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/payment-methods`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(pmInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding payment method:', err); }
-  };
-
-  const handleUpdatePaymentMethod = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/payment-methods/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating payment method:', err); }
-  };
-
-  const handleDeletePaymentMethod = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/payment-methods/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting payment method:', err); }
-  };
-
-  // General Ledger Accounts CRUD & Manual Entry
-  const handleAddAccount = async (accInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/ledger/accounts`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(accInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding ledger account:', err); }
-  };
-
-  const handleUpdateAccount = async (id: string, updates: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/ledger/accounts/${id}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating ledger account:', err); }
-  };
-
-  const handleDeleteAccount = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/ledger/accounts/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error deleting ledger account:', err); }
-  };
-
-  const handleAddManualEntry = async (entryInput: any) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/ledger/entries`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(entryInput)
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error adding manual ledger entry:', err); }
-  };
-
-  // Password & Settings Handlers
   const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    const token = localStorage.getItem('org_admin_token');
     const res = await fetch(`${API_BASE_URL.replace('/v1', '')}/v1/auth/change-password`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({ currentPassword, newPassword })
     });
     const json = await res.json();
@@ -583,122 +241,33 @@ export function App() {
     return { success: true, message: json.message };
   };
 
-  const handleUpdateOrgDetails = async (updates: { name: string; phone: string; address: string; tax_rate: number }) => {
-    setOrg(prev => ({ ...prev, ...updates }));
-    try {
-      await fetch(`${API_BASE_URL}/${org.id}/settings`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(updates)
-      });
-      await syncApiData(org.id);
-    } catch (err) {
-      console.error('Error updating org settings:', err);
-    }
-  };
-
-  // Orders Operational Handlers
-  const handleUpdateOrderItems = async (orderId: string, items: OrderItem[]) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/orders/${orderId}/items`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ items })
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating order items:', err); }
-  };
-
   const handleCompletePosOrder = async (newOrderData: any, paymentMethod: string, amountPaid: number) => {
-    try {
-      const headers = getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}/${org.id}/orders`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(newOrderData)
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        await fetch(`${API_BASE_URL}/${org.id}/sales`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            order_id: json.data.id,
-            payment_method: paymentMethod,
-            amount_paid: amountPaid,
-            amount_due: 0
-          })
+    await runAction('Processing POS Order...', async () => {
+      const newOrder = await createOrderMut.mutateAsync(newOrderData);
+      if (newOrder) {
+        await createSaleMut.mutateAsync({
+          order_id: newOrder.id,
+          payment_method: paymentMethod,
+          amount_paid: amountPaid,
+          amount_due: 0
         });
 
         if (paymentMethod === 'borrow_credit' && newOrderData.client_id) {
           const targetClient = clients.find(c => c.id === newOrderData.client_id);
           if (targetClient) {
             const updatedBalance = Number(targetClient.credit_balance || 0) + Number(amountPaid);
-            await fetch(`${API_BASE_URL}/${org.id}/clients/${targetClient.id}`, {
-              method: 'PUT',
-              headers,
-              body: JSON.stringify({ credit_balance: updatedBalance })
-            });
+            await updateClientMut.mutateAsync({ id: targetClient.id, updates: { credit_balance: updatedBalance } });
           }
         }
-
-        await syncApiData(org.id);
       }
-    } catch (err) { console.error('Error completing POS order:', err); }
+    });
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating order status:', err); }
-  };
-
-  const handleRecordMovement = async (itemId: string, type: 'purchase' | 'wastage' | 'adjustment', qty: number) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/inventory/movement`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ inventory_item_id: itemId, type, qty })
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error recording movement:', err); }
-  };
-
-  const handleUpdateTaskStatus = async (taskId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'done' ? 'pending' : 'done';
-    try {
-      const res = await fetch(`${API_BASE_URL}/${org.id}/tasks/${taskId}/status`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status: nextStatus })
-      });
-      if (res.ok) await syncApiData(org.id);
-    } catch (err) { console.error('Error updating task status:', err); }
-  };
-
-  // AUTH GUARD: Require Staff / Owner Login
   if (!isAuthenticated) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Render view depending on activeTab with Role Guard
   const renderContent = () => {
-    // Role Guard: Chef user ONLY has access to Kitchen KDS
-    if (currentUser?.role === 'chef') {
-      return (
-        <KDSView
-          orders={orders}
-          onUpdateOrderStatus={handleUpdateOrderStatus}
-        />
-      );
-    }
-
     switch (activeTab) {
       case 'dashboard':
         return (
@@ -717,15 +286,15 @@ export function App() {
             clients={clients}
             paymentMethods={paymentMethods}
             onCompleteOrder={handleCompletePosOrder}
-            isLineMode={isLineMode}
             taxRate={Number(org.tax_rate) || 10}
+            isLineMode={isLineMode}
           />
         );
       case 'kds':
         return (
           <KDSView
             orders={orders}
-            onUpdateOrderStatus={handleUpdateOrderStatus}
+            onUpdateOrderStatus={(id, status) => runAction(`Updating Order Status (${status})...`, () => updateOrderStatusMut.mutateAsync({ orderId: id, status }))}
           />
         );
       case 'orders':
@@ -733,20 +302,20 @@ export function App() {
           <OrdersView
             orders={orders}
             products={products}
-            onUpdateOrderStatus={handleUpdateOrderStatus}
-            onUpdateOrderItems={handleUpdateOrderItems}
+            onUpdateOrderStatus={(id, status) => runAction(`Updating Order Status (${status})...`, () => updateOrderStatusMut.mutateAsync({ orderId: id, status }))}
+            onUpdateOrderItems={(id, items) => runAction('Updating Order Items...', () => updateOrderItemsMut.mutateAsync({ orderId: id, items }))}
           />
         );
       case 'inventory':
         return (
           <InventoryView
             inventory={inventory}
-            movements={movements}
+            movements={[]}
             products={products}
-            onLogMovement={handleRecordMovement}
-            onAddInventoryItem={handleAddInventoryItem}
-            onUpdateInventoryItem={handleUpdateInventoryItem}
-            onDeleteInventoryItem={handleDeleteInventoryItem}
+            onLogMovement={async () => {}}
+            onAddInventoryItem={(input) => runAction('Adding Inventory Item...', () => addInventoryMut.mutateAsync(input))}
+            onUpdateInventoryItem={(id, updates) => runAction('Updating Inventory Item...', () => updateInventoryMut.mutateAsync({ id, updates }))}
+            onDeleteInventoryItem={(id) => runAction('Deleting Inventory Item...', () => deleteInventoryMut.mutateAsync(id))}
           />
         );
       case 'sales':
@@ -755,7 +324,7 @@ export function App() {
             orders={orders}
             sales={sales}
             paymentMethods={paymentMethods}
-            onRefreshData={() => syncApiData(org.id)}
+            onRefreshData={() => refetchSales()}
           />
         );
       case 'products':
@@ -764,23 +333,39 @@ export function App() {
             categories={categories}
             products={products}
             inventory={inventory}
-            onAddProduct={handleAddProduct}
-            onUpdateProduct={handleUpdateProduct}
-            onDeleteProduct={handleDeleteProduct}
-            onAddCategory={handleAddCategory}
-            onUpdateCategory={handleUpdateCategory}
-            onDeleteCategory={handleDeleteCategory}
+            onAddProduct={(input) => runAction('Saving Product...', () => addProductMut.mutateAsync(input))}
+            onUpdateProduct={(id, updates) => runAction('Updating Product...', () => updateProductMut.mutateAsync({ id, updates }))}
+            onDeleteProduct={(id) => runAction('Deleting Product...', () => deleteProductMut.mutateAsync(id))}
+            onAddCategory={(input) => runAction('Saving Category...', () => addCategoryMut.mutateAsync(input))}
+            onUpdateCategory={(id, updates) => runAction('Updating Category...', () => updateCategoryMut.mutateAsync({ id, updates }))}
+            onDeleteCategory={(id) => runAction('Deleting Category...', () => deleteCategoryMut.mutateAsync(id))}
           />
         );
       case 'clients':
         return (
           <ClientsView
             clients={clients}
-            onAddClient={handleAddClient}
-            onUpdateClient={handleUpdateClient}
-            onDeleteClient={handleDeleteClient}
-            onPayCreditBalance={handlePayCreditBalance}
-            onRefreshData={() => syncApiData(org.id)}
+            onAddClient={(input) => runAction('Saving Customer Profile...', () => addClientMut.mutateAsync(input))}
+            onUpdateClient={(id, updates) => runAction('Updating Customer Profile...', () => updateClientMut.mutateAsync({ id, updates }))}
+            onDeleteClient={(id) => runAction('Deleting Customer Profile...', () => deleteClientMut.mutateAsync(id))}
+            onPayCreditBalance={(clientId, amount, paymentMethod) => runAction('Recording Credit Settlement...', () => payCreditMut.mutateAsync({ clientId, amount, paymentMethod }))}
+            onRefreshData={() => refetchClients()}
+          />
+        );
+      case 'ledger':
+        return (
+          <LedgerView
+            accounts={accounts}
+            entries={entries}
+            sales={sales}
+            paymentMethods={paymentMethods}
+            onAddAccount={(input) => runAction('Adding Ledger Account...', () => addAccountMut.mutateAsync(input))}
+            onUpdateAccount={(id, updates) => runAction('Updating Ledger Account...', () => updateAccountMut.mutateAsync({ id, updates }))}
+            onDeleteAccount={(id) => runAction('Deleting Ledger Account...', () => deleteAccountMut.mutateAsync(id))}
+            onAddManualEntry={(input) => runAction('Recording Ledger Entry...', () => addEntryMut.mutateAsync(input))}
+            onAddPaymentMethod={(input) => runAction('Adding Payment Method...', () => addPaymentMethodMut.mutateAsync(input))}
+            onUpdatePaymentMethod={(id, updates) => runAction('Updating Payment Method...', () => updatePaymentMethodMut.mutateAsync({ id, updates }))}
+            onDeletePaymentMethod={(id) => runAction('Deleting Payment Method...', () => deletePaymentMethodMut.mutateAsync(id))}
           />
         );
       case 'tasks':
@@ -788,13 +373,13 @@ export function App() {
           <TasksView
             tasks={tasks}
             users={users}
-            onToggleTaskStatus={handleUpdateTaskStatus}
-            onAddEmployee={handleAddUser}
-            onUpdateEmployee={handleUpdateUser}
-            onDeleteEmployee={handleDeleteUser}
-            onAddTask={handleAddTask}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleDeleteTask}
+            onToggleTaskStatus={(id, currentStatus) => runAction('Updating Task Status...', () => toggleTaskMut.mutateAsync({ id, currentStatus }))}
+            onAddEmployee={(input) => runAction('Creating Staff Account...', () => addUserMut.mutateAsync(input))}
+            onUpdateEmployee={(id, updates) => runAction('Updating Staff Account...', () => updateUserMut.mutateAsync({ id, updates }))}
+            onDeleteEmployee={(id) => runAction('Deleting Staff Account...', () => deleteUserMut.mutateAsync(id))}
+            onAddTask={(input) => runAction('Creating Task...', () => addTaskMut.mutateAsync(input))}
+            onUpdateTask={(id, updates) => runAction('Updating Task...', () => updateTaskMut.mutateAsync({ id, updates }))}
+            onDeleteTask={(id) => runAction('Deleting Task...', () => deleteTaskMut.mutateAsync(id))}
             currentUserRole={currentUser?.role || 'owner'}
           />
         );
@@ -804,7 +389,7 @@ export function App() {
             orders={orders}
             inventory={inventory}
             sales={sales}
-            onRefreshData={() => syncApiData(org.id)}
+            onRefreshData={() => { refetchSales(); }}
           />
         );
       case 'settings':
@@ -817,8 +402,8 @@ export function App() {
             paymentMethods={paymentMethods}
             accounts={accounts}
             onChangePassword={handleChangePassword}
-            onUpdateOrg={handleUpdateOrgDetails}
-            onDeletePaymentMethod={handleDeletePaymentMethod}
+            onUpdateOrg={(updates) => runAction('Saving Restaurant Settings...', () => updateSettingsMut.mutateAsync(updates))}
+            onDeletePaymentMethod={(id) => runAction('Deleting Payment Method...', () => deletePaymentMethodMut.mutateAsync(id))}
           />
         );
       default:
@@ -842,6 +427,14 @@ export function App() {
         isLineMode={isLineMode}
         userRole={currentUser?.role || 'owner'}
       />
+
+      {/* Global High-Contrast Action Loading Indicator Toast */}
+      {isActionLoading && (
+        <div className="fixed top-5 right-5 z-[9999] bg-slate-900 text-white text-xs font-mono font-bold px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-3 border-2 border-emerald-500 animate-pulse">
+          <Loader2 className="w-5 h-5 animate-spin text-emerald-400 shrink-0" />
+          <span className="text-white tracking-wide">{actionMessage}</span>
+        </div>
+      )}
 
       {/* Mobile Slide-Over Sidebar Drawer Modal */}
       {isMobileMenuOpen && (
@@ -874,7 +467,7 @@ export function App() {
           activeOrgId={org.id}
           onSwitchOrg={handleSwitchOrg}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          onLogout={handleLogout}
+          onLogout={logout}
         />
 
         <main className="flex-1 p-3 sm:p-6 overflow-y-auto pb-24 md:pb-6">

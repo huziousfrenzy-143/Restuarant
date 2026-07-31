@@ -14,11 +14,14 @@
   "dependencies": {
     "@restaurant-saas/shared-schemas": "file:../../packages/shared-schemas",
     "@restaurant-saas/ui": "file:../../packages/ui",
+    "@tanstack/react-query": "^5.51.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.395.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^2.3.0"
+    "restaurant-saas-monorepo": "file:../..",
+    "tailwind-merge": "^2.3.0",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

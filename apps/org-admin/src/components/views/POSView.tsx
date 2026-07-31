@@ -91,10 +91,13 @@ export const POSView: React.FC<POSViewProps> = ({
     setCart(prev => prev.filter(item => item.product_id !== productId));
   };
 
+  const [customTaxPercent, setCustomTaxPercent] = useState<number | null>(null);
+  const activeTaxRate = customTaxPercent !== null ? customTaxPercent : taxRate;
+
   const subtotal = cart.reduce((sum, item) => sum + item.qty * item.unit_price, 0);
   const discountAmount = (subtotal * discountPercent) / 100;
   const taxableTotal = Math.max(0, subtotal - discountAmount);
-  const tax = (taxableTotal * taxRate) / 100;
+  const tax = (taxableTotal * activeTaxRate) / 100;
   const totalPayable = taxableTotal + tax;
 
   const handleChargeSubmit = () => {
@@ -123,6 +126,7 @@ export const POSView: React.FC<POSViewProps> = ({
     // Reset state
     setCart([]);
     setDiscountPercent(0);
+    setCustomTaxPercent(null);
     setSelectedClientId('');
     setIsChargeModalOpen(false);
     setIsMobileCartOpen(false);
@@ -419,9 +423,21 @@ export const POSView: React.FC<POSViewProps> = ({
               <span className="tabular-nums font-semibold text-danger">-{formatCurrency(discountAmount)}</span>
             </div>
 
-            <div className="flex justify-between text-graphite">
-              <span>Tax ({taxRate}%)</span>
-              <span className="tabular-nums font-semibold">{formatCurrency(tax)}</span>
+            <div className="flex justify-between items-center text-graphite">
+              <span className="flex items-center gap-1.5 text-xs">
+                <span>Tax Rate</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={activeTaxRate}
+                  onChange={(e) => setCustomTaxPercent(Math.max(0, Number(e.target.value)))}
+                  className="w-14 px-1.5 py-0.5 rounded border border-mist text-xs font-mono font-semibold bg-white text-ink text-center focus:outline-none focus:border-primary shadow-inner"
+                />
+                <span>%</span>
+              </span>
+              <span className="tabular-nums font-semibold text-xs">{formatCurrency(tax)}</span>
             </div>
 
             <div className="flex justify-between text-sm font-bold text-ink pt-1 border-t border-mist">
