@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build:shared": "npm --prefix ../../packages/shared-schemas run build",
+    "build:packages": "npm --prefix ../../packages/shared-schemas run build && npm --prefix ../../packages/ui run build",
+    "build": "npm run build:packages && tsc && vite build",
+    "vercel-build": "npm run build:packages && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
