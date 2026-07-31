@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3001",
-    "build:shared": "npm --prefix ../../packages/shared-schemas run build",
+    "build:shared": "npm run build:packages && tsc && vite build",
     "build:packages": "npm --prefix ../../packages/shared-schemas run build && npm --prefix ../../packages/ui run build",
     "build": "npm run build:packages && tsc && vite build",
     "vercel-build": "npm run build:packages && tsc && vite build",
