@@ -15,6 +15,8 @@
     "build:shared": "npm --prefix packages/shared-schemas run build",
     "build:packages": "npm --prefix packages/shared-schemas run build && npm --prefix packages/ui run build",
     "build:api": "npm run build:shared && npm --prefix apps/api run build",
+    "build:org": "npm run build:packages && npm --prefix apps/org-admin run build",
+    "build:super": "npm run build:packages && npm --prefix apps/super-admin run build",
     "build": "npm run build:packages && npm run build --workspaces",
     "vercel-build": "npm run build:shared && npm --prefix apps/api run build"
   },
