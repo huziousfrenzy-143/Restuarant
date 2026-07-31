@@ -24,7 +24,8 @@ import {
   createClientApi,
   updateClientApi,
   payClientCreditApi,
-  deleteClientApi
+  deleteClientApi,
+  setApiAuthToken
 } from './services/api';
 
 import {
@@ -35,6 +36,8 @@ import {
   getPendingSyncQueue,
   addPendingSyncItem,
   clearPendingSyncQueue,
+  getAuthSession,
+  clearAuthSession,
   PendingSyncItem
 } from './services/storage';
 
@@ -74,9 +77,28 @@ export default function App() {
   const colors = isLineMode ? LineModeColors : LightColors;
   const iconColor = colors.primary;
 
-  // Load offline stored cache on startup
+  // Load offline stored cache & hydrate persistent auth session on startup
   useEffect(() => {
     (async () => {
+      try {
+        const session = await getAuthSession();
+        if (session.token && session.user) {
+          setApiAuthToken(session.token);
+          setCurrentUser(session.user);
+          setCurrentOrg(session.user.org || session.userOrgs?.[0] || null);
+          setUserOrgs(session.userOrgs || []);
+          setIsAuthenticated(true);
+          if (session.user.role === 'chef') {
+            setActiveTab('kds');
+            setIsLineMode(true);
+          } else if (session.user.role === 'salesman') {
+            setActiveTab('pos');
+          } else {
+            setActiveTab('overview');
+          }
+        }
+      } catch (e) {}
+
       const storedOrders = await getLocalOrders();
       const storedClients = await getLocalClients();
       const queue = await getPendingSyncQueue();
@@ -217,7 +239,9 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await clearAuthSession();
+    setApiAuthToken(null);
     setIsAuthenticated(false);
     setCurrentUser(null);
     setCurrentOrg(null);

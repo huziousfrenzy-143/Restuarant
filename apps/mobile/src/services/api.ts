@@ -1,5 +1,5 @@
-// Production React Native Mobile API Client for Saffron SaaS Backend
 import { Product, Order, InventoryItem, OrderStatus, Client, ProductCategory } from '@restaurant-saas/shared-schemas';
+import { saveAuthSession, clearAuthSession } from './storage';
 
 export const API_BASE_URL = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL : 'https://restuarants-api.vercel.app/api/v1').replace(/\/$/, '');
 
@@ -61,10 +61,11 @@ export async function verifyOtpApi(email: string, otp: string, targetOrgId?: str
   if (!res.ok) {
     throw new Error(json.error?.message || 'Invalid or expired OTP code');
   }
-  const { accessToken, token, user, userOrgs } = json.data || {};
+  const { accessToken, token, refreshToken, user, userOrgs } = json.data || {};
   const effectiveToken = accessToken || token;
   if (effectiveToken) {
     setApiAuthToken(effectiveToken);
+    await saveAuthSession(effectiveToken, refreshToken, user, userOrgs);
   }
   return {
     user,
@@ -85,10 +86,11 @@ export async function loginStaffApi(email: string, targetOrgId?: string) {
   if (!res.ok) {
     throw new Error(json.error?.message || 'Login failed');
   }
-  const { accessToken, token, user, userOrgs } = json.data || {};
+  const { accessToken, token, refreshToken, user, userOrgs } = json.data || {};
   const effectiveToken = accessToken || token;
   if (effectiveToken) {
     setApiAuthToken(effectiveToken);
+    await saveAuthSession(effectiveToken, refreshToken, user, userOrgs);
   }
   return {
     user,
@@ -112,10 +114,11 @@ export async function switchOrgApi(targetOrgId: string) {
   if (!res.ok) {
     throw new Error(json.error?.message || 'Failed to switch organization context');
   }
-  const { accessToken, token, user, userOrgs } = json.data || {};
+  const { accessToken, token, refreshToken, user, userOrgs } = json.data || {};
   const effectiveToken = accessToken || token;
   if (effectiveToken) {
     setApiAuthToken(effectiveToken);
+    await saveAuthSession(effectiveToken, refreshToken, user, userOrgs);
   }
   return {
     user,
