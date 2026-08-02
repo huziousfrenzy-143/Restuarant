@@ -10,8 +10,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@restaurant-saas/shared-schemas': path.resolve(__dirname, '../../packages/shared-schemas/src/index.ts'),
       '@restaurant-saas/ui': path.resolve(__dirname, '../../packages/ui/src/index.ts'),
-      'react': path.resolve(__dirname, './node_modules/react'),
-      'react-dom': path.resolve(__dirname, './node_modules/react-dom')
+      react: path.resolve(__dirname, '../../node_modules/react'),
+      'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),
     }
   },
   server: {
