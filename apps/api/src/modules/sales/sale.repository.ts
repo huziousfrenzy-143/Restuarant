@@ -10,6 +10,14 @@ export class SaleRepository {
     );
     return res.rows;
   }
+  static async getTodayTotal(client: PoolClient): Promise<number> {
+    const res = await client.query(
+      `SELECT COALESCE(SUM(amount_paid), 0) as total
+       FROM sales
+       WHERE DATE(paid_at) = CURRENT_DATE`
+    );
+    return parseFloat(res.rows[0].total);
+  }
 
   static async create(client: PoolClient, payload: any, cashierId: string, cashierName: string): Promise<Sale> {
     const pmCode = payload.payment_method || 'cash';

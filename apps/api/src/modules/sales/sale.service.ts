@@ -6,6 +6,10 @@ export class SaleService {
     return await tenantDb(async (client) => SaleRepository.findAll(client));
   }
 
+  static async getTodayTotal(tenantDb: TenantDbHelper) {
+    return await tenantDb(async (client) => SaleRepository.getTodayTotal(client));
+  }
+
   static async recordSale(tenantDb: TenantDbHelper, payload: any, cashierId: string, cashierName: string) {
     return await tenantDb(async (client) => SaleRepository.create(client, payload, cashierId, cashierName));
   }

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config/api';
-import { getAuthToken } from '../utils/cookieUtils';
+import { getAuthToken, getRefreshToken, saveAuthToken, clearAuthToken } from '../utils/cookieUtils';
 
 export const getAuthHeaders = () => {
   const token = getAuthToken();
@@ -9,8 +9,16 @@ export const getAuthHeaders = () => {
   };
 };
 
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+const onRefreshed = (token: string) => {
+  refreshSubscribers.forEach(cb => cb(token));
+  refreshSubscribers = [];
+};
+
 export async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       ...getAuthHeaders(),
       ...(options?.headers || {})
@@ -19,8 +27,63 @@ export async function request<T>(endpoint: string, options?: RequestInit): Promi
   });
 
   if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error?.message || `HTTP ${res.status}`);
+    const errBody = await res.clone().json().catch(() => ({}));
+    
+    if (res.status === 401 && errBody.error?.code === 'UNAUTHORIZED') {
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken })
+            });
+
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              const newAccessToken = refreshData.data.accessToken;
+              const newRefreshToken = refreshData.data.refreshToken;
+              saveAuthToken(newAccessToken, newRefreshToken);
+              onRefreshed(newAccessToken);
+            } else {
+              clearAuthToken();
+              window.location.href = '/login';
+              throw new Error('Session expired. Please log in again.');
+            }
+          } catch (e) {
+            clearAuthToken();
+            window.location.href = '/login';
+            throw e;
+          } finally {
+            isRefreshing = false;
+          }
+        }
+
+        const newAccessToken = await new Promise<string>(resolve => {
+          refreshSubscribers.push(resolve);
+        });
+
+        res = await fetch(`${API_BASE_URL}${endpoint}`, {
+          headers: {
+            ...getAuthHeaders(),
+            ...(options?.headers || {}),
+            Authorization: `Bearer ${newAccessToken}`
+          },
+          ...options
+        });
+
+        if (!res.ok) {
+          const retryErrBody = await res.json().catch(() => ({}));
+          throw new Error(retryErrBody.error?.message || `HTTP ${res.status}`);
+        }
+      } else {
+        throw new Error(errBody.error?.message || `HTTP ${res.status}`);
+      }
+    } else {
+      throw new Error(errBody.error?.message || `HTTP ${res.status}`);
+    }
   }
 
   const json = await res.json();

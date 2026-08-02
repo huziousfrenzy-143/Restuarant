@@ -106,24 +106,49 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
 
   // Interactive hourly revenue distribution calculation
   const hourlyData = useMemo(() => {
-    const slots = [
-      { label: '09 AM', ratio: 0.05 },
-      { label: '11 AM', ratio: 0.10 },
-      { label: '01 PM', ratio: 0.22 },
-      { label: '03 PM', ratio: 0.08 },
-      { label: '05 PM', ratio: 0.12 },
-      { label: '07 PM', ratio: 0.25 },
-      { label: '09 PM', ratio: 0.18 }
-    ];
+    const hourlyMap = new Map<
+      number,
+      {
+        revenue: number;
+        ordersCount: number;
+      }
+    >();
 
-    return slots.map(s => ({
-      label: s.label,
-      revenue: Math.round(totalRevenue * s.ratio),
-      ordersCount: Math.round(filteredOrders.length * s.ratio)
+    // Create 24 hours (00 - 23)
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyMap.set(hour, {
+        revenue: 0,
+        ordersCount: 0,
+      });
+    }
+
+    filteredOrders.forEach(order => {
+      const date = new Date(order.created_at);
+      const hour = date.getHours();
+
+      const current = hourlyMap.get(hour)!;
+
+      current.revenue += Number(order.total);
+      current.ordersCount += 1;
+    });
+
+    return Array.from(hourlyMap.entries()).map(([hour, data]) => ({
+      hour,
+      label: new Date(0, 0, 0, hour).toLocaleTimeString([], {
+        hour: "numeric",
+        hour12: true,
+      }),
+      revenue: data.revenue,
+      ordersCount: data.ordersCount,
     }));
-  }, [totalRevenue, filteredOrders.length]);
+  }, [filteredOrders]);
 
-  const maxHourlyRevenue = Math.max(...hourlyData.map(h => h.revenue), 10);
+  const maxHourlyRevenue = Math.max(
+    ...hourlyData.map(h => h.revenue),
+    1
+  );
+
+
 
   const handleRefreshClick = async () => {
     if (onRefreshData) {
@@ -132,6 +157,33 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
       setTimeout(() => setIsRefreshing(false), 500);
     }
   };
+
+  const linePath = useMemo(() => {
+    if (hourlyData.length === 0) return "";
+
+    const points = hourlyData.map((item, idx) => ({
+      x: (idx / (hourlyData.length - 1)) * 100,
+      y:
+        maxHourlyRevenue > 0
+          ? 100 - (item.revenue / maxHourlyRevenue) * 95
+          : 100,
+    }));
+
+    let d = `M ${points[0].x},${points[0].y}`;
+
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+
+      const cp1x = prev.x + (curr.x - prev.x) / 2;
+      const cp2x = prev.x + (curr.x - prev.x) / 2;
+
+      d += ` C ${cp1x},${prev.y} ${cp2x},${curr.y} ${curr.x},${curr.y}`;
+    }
+
+    return d;
+  }, [hourlyData, maxHourlyRevenue]);
+
 
   const handleExportCsv = () => {
     const exportRows = filteredOrders.map(o => ({
@@ -212,9 +264,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
 
           <button
             onClick={() => setUseCustomRange(!useCustomRange)}
-            className={`px-3 py-1.5 rounded border text-xs font-bold transition-all flex items-center gap-1.5 ${
-              useCustomRange ? 'bg-primary text-white border-primary shadow-sm' : 'bg-steel border-mist text-graphite hover:text-ink'
-            }`}
+            className={`px-3 py-1.5 rounded border text-xs font-bold transition-all flex items-center gap-1.5 ${useCustomRange ? 'bg-primary text-white border-primary shadow-sm' : 'bg-steel border-mist text-graphite hover:text-ink'
+              }`}
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>{useCustomRange ? 'Custom Range Enabled' : 'Custom Date & Time Range'}</span>
@@ -299,43 +350,90 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
           </span>
         </h3>
 
-        <div className="h-48 flex items-end justify-between gap-4 pt-8 font-mono text-xs text-graphite border-b border-mist pb-3">
-          {hourlyData.map((item, idx) => {
-            const heightPercent = maxHourlyRevenue > 0 ? Math.max(12, (item.revenue / maxHourlyRevenue) * 100) : 12;
-            const isHovered = activeHoverBar === idx;
+        <div className="h-64 w-full relative pt-6 pb-8 font-mono text-xs text-graphite">
+          {/* Grid lines */}
+          <div className="absolute inset-x-0 top-1/4 border-t border-mist border-dashed pointer-events-none"></div>
+          <div className="absolute inset-x-0 top-2/4 border-t border-mist border-dashed pointer-events-none"></div>
+          <div className="absolute inset-x-0 top-3/4 border-t border-mist border-dashed pointer-events-none"></div>
+          <div className="absolute inset-x-0 bottom-8 border-t border-mist pointer-events-none"></div>
 
-            return (
-              <div
-                key={idx}
-                onMouseEnter={() => setActiveHoverBar(idx)}
-                onMouseLeave={() => setActiveHoverBar(null)}
-                className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer relative"
-              >
-                {/* Tooltip Card on Hover */}
-                {isHovered && (
-                  <div className="absolute -top-12 z-20 bg-ink text-white p-2 rounded shadow-lg text-[10px] whitespace-nowrap font-mono space-y-0.5 animate-in fade-in duration-150">
-                    <div className="font-bold text-primary">{item.label}</div>
-                    <div>Revenue: <strong>{formatCurrency(item.revenue)}</strong></div>
-                    <div>Orders: <strong>{item.ordersCount}</strong></div>
-                  </div>
-                )}
+          {/* SVG for line and area */}
+          <svg viewBox="0 0 100 100" className="absolute inset-x-0 top-6 bottom-8 w-full h-[calc(100%-3.5rem)] overflow-visible z-10 pointer-events-none" preserveAspectRatio="none">
+            {/* Area under the line */}
+            <polygon
+              points={`0,100 ${hourlyData.map((item, idx) => {
+                const x = (idx / (hourlyData.length - 1)) * 100;
+                const y = maxHourlyRevenue > 0 ? 100 - (item.revenue / maxHourlyRevenue) * 95 : 100;
+                return `${x},${y}`;
+              }).join(' ')} 100,100`}
+              fill="var(--color-primary)"
+              className="opacity-[0.08]"
+            />
+            {/* The Line */}
+            <path
+              d={linePath}
+              fill="none"
+              stroke="var(--color-primary)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
 
-                <span className={`text-[11px] font-mono font-bold transition-all ${
-                  isHovered ? 'text-primary scale-110' : 'text-graphite'
-                }`}>
-                  {formatCurrency(item.revenue)}
-                </span>
+          {/* Interactive Data Points */}
+          <div className="absolute inset-x-0 top-6 bottom-8 z-20">
+            {hourlyData.map((item, idx) => {
+              const xPercent = (idx / (hourlyData.length - 1)) * 100;
+              const yPercent = maxHourlyRevenue > 0 ? 100 - (item.revenue / maxHourlyRevenue) * 95 : 100;
+              const isHovered = activeHoverBar === idx;
 
+              return (
                 <div
-                  style={{ height: `${heightPercent}%` }}
-                  className={`w-full rounded-t transition-all duration-200 ${
-                    isHovered ? 'bg-primary shadow-lg ring-2 ring-primary/40' : 'bg-primary/80 hover:bg-primary'
-                  }`}
-                />
-                <span className="text-[11px] font-bold text-ink">{item.label}</span>
-              </div>
-            );
-          })}
+                  key={idx}
+                  className="absolute w-12 h-full top-0 -ml-6 flex flex-col items-center group cursor-pointer"
+                  style={{ left: `${xPercent}%` }}
+                  onMouseEnter={() => setActiveHoverBar(idx)}
+                  onMouseLeave={() => setActiveHoverBar(null)}
+                >
+                  {/* Tooltip */}
+                  {isHovered && (
+                    <div
+                      className="absolute z-30 bg-ink text-white p-2.5 rounded-lg shadow-xl text-[10px] whitespace-nowrap font-mono space-y-1 animate-in fade-in zoom-in-95 duration-150 pointer-events-none border border-white/10"
+                      style={{ bottom: `calc(${100 - yPercent}% + 16px)` }}
+                    >
+                      <div className="font-bold text-primary text-xs border-b border-white/20 pb-1 mb-1">{idx % 3 === 0 ? item.label : ""}</div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-white/60">Revenue</span>
+                        <strong className="text-emerald-400">{formatCurrency(item.revenue)}</strong>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-white/60">Orders</span>
+                        <strong className="text-white">{item.ordersCount}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Point Dot */}
+                  <div
+                    className={`absolute rounded-full border-[2.5px] transition-all duration-200 shadow-sm ${isHovered
+                      ? 'w-4 h-4 border-primary bg-surface scale-125 shadow-[0_0_12px_rgba(31,92,91,0.6)]'
+                      : 'w-3 h-3 border-primary bg-surface hover:scale-110'
+                      }`}
+                    style={{ top: `calc(${yPercent}% - ${isHovered ? 8 : 6}px)` }}
+                  />
+
+                  {/* Invisible tall hover target */}
+                  <div className="w-full h-full absolute inset-0 z-10" />
+
+                  {/* X Axis Label */}
+                  <span className={`absolute -bottom-7 text-[10px] font-bold whitespace-nowrap transition-colors ${isHovered ? 'text-primary' : 'text-ink'
+                    }`}>
+                    {idx % 3 === 0 ? item.label : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

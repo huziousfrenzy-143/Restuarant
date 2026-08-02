@@ -419,7 +419,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-steel flex font-sans selection:bg-primary/20 relative">
+    <div className={`min-h-screen bg-steel flex font-sans selection:bg-primary/20 relative ${isLineMode ? 'line-mode' : ''}`}>
       {/* Desktop Sidebar */}
       <Sidebar
         activeTab={activeTab}

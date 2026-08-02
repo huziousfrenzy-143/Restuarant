@@ -20,6 +20,10 @@ export function getAuthToken(): string | null {
   return getCookie('org_admin_token') || localStorage.getItem('org_admin_token') || null;
 }
 
+export function getRefreshToken(): string | null {
+  return getCookie('org_admin_refresh_token') || localStorage.getItem('org_admin_refresh_token') || null;
+}
+
 export function saveAuthToken(accessToken: string, refreshToken?: string, user?: any) {
   if (accessToken) {
     setCookie('org_admin_token', accessToken, 7);

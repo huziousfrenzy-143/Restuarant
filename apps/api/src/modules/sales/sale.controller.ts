@@ -3,6 +3,7 @@ import { SaleService } from './sale.service';
 import { CreateSaleInputSchema } from '@restaurant-saas/shared-schemas';
 import { TenantRequest } from '../../middlewares/tenant.middleware';
 
+
 export class SaleController {
   static async getSales(req: TenantRequest, res: Response) {
     if (!req.tenantDb) {
@@ -10,6 +11,14 @@ export class SaleController {
     }
     const data = await SaleService.getSales(req.tenantDb);
     res.json({ data });
+  }
+
+  static async getTodayTotal(req: TenantRequest, res: Response) {
+    if (!req.tenantDb) {
+      return res.status(500).json({ error: { code: 'TENANT_DB_UNAVAILABLE', message: 'Tenant database connection not initialized' } });
+    }
+    const total = await SaleService.getTodayTotal(req.tenantDb);
+    res.json({ data: { total } });
   }
 
   static async recordSale(req: TenantRequest, res: Response) {

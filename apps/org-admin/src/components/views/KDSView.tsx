@@ -62,15 +62,14 @@ export const KDSView: React.FC<KDSViewProps> = ({ orders, onUpdateOrderStatus })
             return (
               <div
                 key={order.id}
-                className={`w-full bg-[#1E2125] border rounded-lg flex flex-col justify-between overflow-hidden shadow-lg transition-all ${
-                  order.is_overdue
-                    ? 'border-red-500/80 ring-1 ring-red-500/50 animate-pulse'
-                    : order.status === 'new'
+                className={`w-full bg-[#1E2125] border rounded-lg flex flex-col justify-between overflow-hidden shadow-lg transition-all ${order.is_overdue
+                  ? 'border-red-500/80 ring-1 ring-red-500/50 animate-pulse'
+                  : order.status === 'new'
                     ? 'border-slate-600'
                     : order.status === 'preparing'
-                    ? 'border-amber-500/60'
-                    : 'border-emerald-500/60'
-                }`}
+                      ? 'border-amber-500/60'
+                      : 'border-emerald-500/60'
+                  }`}
               >
                 {/* Ticket Top Header: Monospace Order # and Table # (§4.3 Oversized 20-24px) */}
                 <div className="p-4 border-b border-[#2C3036] bg-[#17191D] flex items-center justify-between">
@@ -127,7 +126,7 @@ export const KDSView: React.FC<KDSViewProps> = ({ orders, onUpdateOrderStatus })
                       className="w-full h-14 rounded-md bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-sm uppercase tracking-wider shadow flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
                     >
                       <Play className="w-5 h-5 fill-current" />
-                      <span>START PREPARING TICKET</span>
+                      <span>START PREPARING</span>
                     </button>
                   )}
 
@@ -137,7 +136,7 @@ export const KDSView: React.FC<KDSViewProps> = ({ orders, onUpdateOrderStatus })
                       className="w-full h-14 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm uppercase tracking-wider shadow flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
                     >
                       <CheckCircle className="w-5 h-5" />
-                      <span>MARK READY TO SERVE</span>
+                      <span>MARK READY </span>
                     </button>
                   )}
 

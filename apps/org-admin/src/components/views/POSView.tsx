@@ -91,6 +91,12 @@ export const POSView: React.FC<POSViewProps> = ({
     setCart(prev => prev.filter(item => item.product_id !== productId));
   };
 
+  const getCategoryName = (categoryId: string): string => {
+    const match = categories?.find(c => c.id === categoryId);
+    return match ? match.name : 'Unknown Category';
+  }
+
+
   const [customTaxPercent, setCustomTaxPercent] = useState<number | null>(null);
   const activeTaxRate = customTaxPercent !== null ? customTaxPercent : taxRate;
 
@@ -141,11 +147,10 @@ export const POSView: React.FC<POSViewProps> = ({
           <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                selectedCategory === 'all'
-                  ? 'bg-primary text-white shadow-sm font-bold'
-                  : 'bg-surface border border-mist text-ink hover:bg-steel'
-              }`}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${selectedCategory === 'all'
+                ? 'bg-primary text-white shadow-sm font-bold'
+                : 'bg-surface border border-mist text-ink hover:bg-steel'
+                }`}
             >
               <span>All Menu Items</span>
               <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-steel text-graphite'}`}>
@@ -159,11 +164,10 @@ export const POSView: React.FC<POSViewProps> = ({
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-primary text-white shadow-sm font-bold'
-                      : 'bg-surface border border-mist text-ink hover:bg-steel'
-                  }`}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${isSelected
+                    ? 'bg-primary text-white shadow-sm font-bold'
+                    : 'bg-surface border border-mist text-ink hover:bg-steel'
+                    }`}
                 >
                   <span>{cat.name}</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-steel text-graphite'}`}>
@@ -188,43 +192,47 @@ export const POSView: React.FC<POSViewProps> = ({
         </div>
 
         {/* Product Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
           {filteredProducts.map(product => {
             const inCart = cart.find(i => i.product_id === product.id);
             return (
               <button
                 key={product.id}
                 onClick={() => addToCart(product)}
-                className={`p-3.5 rounded-lg border text-left flex flex-col justify-between transition-all group ${
-                  inCart
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                    : 'border-mist bg-surface hover:border-primary/50 hover:shadow-sm'
-                }`}
+                className={`rounded-xl border overflow-hidden text-left flex flex-col transition-all group h-full relative ${inCart
+                  ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-sm'
+                  : 'border-mist bg-surface hover:border-graphite/40 hover:shadow-md'
+                  }`}
               >
-                <div>
-                  {product.image_url && (
-                    <div className="h-24 w-full rounded-md overflow-hidden bg-steel mb-2 border border-mist/50">
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[11px] font-mono text-graphite uppercase">{product.sku}</span>
-                    {inCart && (
-                      <span className="w-5 h-5 rounded-full bg-primary text-white font-mono font-bold text-xs flex items-center justify-center">
-                        {inCart.qty}
-                      </span>
-                    )}
+                {/* Quantity Badge overlay */}
+                {inCart && (
+                  <div className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-primary text-white font-mono font-bold text-[11px] flex items-center justify-center shadow-md">
+                    {inCart.qty}
                   </div>
-                  <h3 className="font-semibold text-sm text-ink group-hover:text-primary transition-colors line-clamp-2 mt-1">
-                    {product.name}
-                  </h3>
-                </div>
+                )}
 
-                <div className="mt-3 flex items-center justify-between pt-2 border-t border-mist/50">
-                  <span className="font-mono font-bold text-sm text-ink tabular-nums">
-                    {formatCurrency(product.price)}
-                  </span>
-                  <span className="text-[11px] text-graphite capitalize">{product.category_name.split(' ')[0]}</span>
+                {product.image_url ? (
+                  <div className="h-32 w-full bg-steel border-b border-mist/30 overflow-hidden shrink-0 relative">
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-1 w-full bg-gradient-to-r from-steel to-mist shrink-0"></div>
+                )}
+
+                <div className="p-3.5 flex flex-col justify-between flex-1 w-full">
+                  <div>
+                    <p className="text-[10px] text-graphite font-mono mb-1 uppercase tracking-wide">{product.sku}</p>
+                    <p className="font-bold text-[13px] text-ink leading-snug line-clamp-2 group-hover:text-primary transition-colors">{product.name}</p>
+                    <span className="text-[10px] text-graphite font-medium  py-0.5  rounded-sm line-clamp-1 ">{getCategoryName(product.category_id)}</span>
+                  </div>
+
+                  <div className="pt-3 border-t border-mist/40 flex items-end justify-between w-full">
+                    <span className="font-mono font-extrabold text-ink text-[13px] tabular-nums">{formatCurrency(product.price)}</span>
+                  </div>
                 </div>
               </button>
             );
@@ -252,9 +260,8 @@ export const POSView: React.FC<POSViewProps> = ({
       )}
 
       {/* Right Column: POS Cart Drawer (Responsive Modal on Mobile, Sidebar on Desktop) */}
-      <div className={`w-full md:w-96 border-t md:border-t-0 md:border-l border-mist bg-surface flex flex-col justify-between shrink-0 shadow-lg z-20 ${
-        isMobileCartOpen ? 'fixed inset-0 z-50 overflow-y-auto pt-safe pb-safe p-4' : 'hidden md:flex'
-      }`}>
+      <div className={`w-full md:w-80  border-t md:border-t-0 md:border-l border-mist bg-surface flex flex-col justify-between shrink-0 shadow-lg z-20 ${isMobileCartOpen ? 'fixed inset-0 z-50 overflow-y-auto pt-safe pb-safe p-4' : 'hidden md:flex'
+        }`}>
         {/* Cart Header */}
         <div className="p-4 border-b border-mist space-y-3">
           <div className="flex items-center justify-between">
@@ -287,25 +294,22 @@ export const POSView: React.FC<POSViewProps> = ({
           <div className="grid grid-cols-3 gap-1 p-1 bg-steel rounded-md text-xs font-medium font-mono">
             <button
               onClick={() => setOrderType('dine_in')}
-              className={`py-1.5 rounded transition-all ${
-                orderType === 'dine_in' ? 'bg-surface text-ink font-bold shadow-sm' : 'text-graphite hover:text-ink'
-              }`}
+              className={`py-1.5 rounded transition-all ${orderType === 'dine_in' ? 'bg-surface text-ink font-bold shadow-sm' : 'text-graphite hover:text-ink'
+                }`}
             >
               Dine-In
             </button>
             <button
               onClick={() => setOrderType('takeaway')}
-              className={`py-1.5 rounded transition-all ${
-                orderType === 'takeaway' ? 'bg-surface text-ink font-bold shadow-sm' : 'text-graphite hover:text-ink'
-              }`}
+              className={`py-1.5 rounded transition-all ${orderType === 'takeaway' ? 'bg-surface text-ink font-bold shadow-sm' : 'text-graphite hover:text-ink'
+                }`}
             >
               Takeaway
             </button>
             <button
               onClick={() => setOrderType('delivery')}
-              className={`py-1.5 rounded transition-all ${
-                orderType === 'delivery' ? 'bg-surface text-ink font-bold shadow-sm' : 'text-graphite hover:text-ink'
-              }`}
+              className={`py-1.5 rounded transition-all ${orderType === 'delivery' ? 'bg-surface text-ink font-bold shadow-sm' : 'text-graphite hover:text-ink'
+                }`}
             >
               Delivery
             </button>
@@ -486,9 +490,8 @@ export const POSView: React.FC<POSViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cash')}
-                    className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all ${
-                      paymentMethod === 'cash' ? 'bg-primary/10 border-primary text-primary' : 'bg-surface border-mist text-ink hover:bg-steel'
-                    }`}
+                    className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all ${paymentMethod === 'cash' ? 'bg-primary/10 border-primary text-primary' : 'bg-surface border-mist text-ink hover:bg-steel'
+                      }`}
                   >
                     <Banknote className="w-4 h-4 text-emerald-600" />
                     <span>Cash Register</span>
@@ -497,9 +500,8 @@ export const POSView: React.FC<POSViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('card')}
-                    className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all ${
-                      paymentMethod === 'card' ? 'bg-primary/10 border-primary text-primary' : 'bg-surface border-mist text-ink hover:bg-steel'
-                    }`}
+                    className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all ${paymentMethod === 'card' ? 'bg-primary/10 border-primary text-primary' : 'bg-surface border-mist text-ink hover:bg-steel'
+                      }`}
                   >
                     <CreditCard className="w-4 h-4 text-sky-600" />
                     <span>Credit / Debit Card</span>
@@ -508,9 +510,8 @@ export const POSView: React.FC<POSViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('borrow_credit')}
-                    className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all col-span-2 ${
-                      paymentMethod === 'borrow_credit' ? 'bg-amber-500/10 border-amber-500 text-amber-700' : 'bg-surface border-mist text-ink hover:bg-steel'
-                    }`}
+                    className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all col-span-2 ${paymentMethod === 'borrow_credit' ? 'bg-amber-500/10 border-amber-500 text-amber-700' : 'bg-surface border-mist text-ink hover:bg-steel'
+                      }`}
                   >
                     <BookOpen className="w-4 h-4 text-amber-600" />
                     <div>
@@ -524,9 +525,8 @@ export const POSView: React.FC<POSViewProps> = ({
                       key={pm.id}
                       type="button"
                       onClick={() => setPaymentMethod(pm.code)}
-                      className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all ${
-                        paymentMethod === pm.code ? 'bg-primary/10 border-primary text-primary' : 'bg-surface border-mist text-ink hover:bg-steel'
-                      }`}
+                      className={`p-3 rounded border text-left flex items-center gap-2 font-bold transition-all ${paymentMethod === pm.code ? 'bg-primary/10 border-primary text-primary' : 'bg-surface border-mist text-ink hover:bg-steel'
+                        }`}
                     >
                       <Wallet className="w-4 h-4 text-primary" />
                       <span>{pm.name}</span>
