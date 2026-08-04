@@ -38,6 +38,7 @@ import {
   clearPendingSyncQueue,
   getAuthSession,
   clearAuthSession,
+  setPendingSyncQueue,
   PendingSyncItem
 } from './services/storage';
 
@@ -57,6 +58,7 @@ import {
 } from 'lucide-react-native';
 
 export default function App() {
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentOrg, setCurrentOrg] = useState<any>(null);
@@ -105,6 +107,8 @@ export default function App() {
       if (storedOrders.length > 0) setOrders(storedOrders);
       if (storedClients.length > 0) setClients(storedClients);
       setPendingQueue(queue);
+      
+      setIsAuthLoading(false);
     })();
   }, []);
 
@@ -120,18 +124,38 @@ export default function App() {
         fetchClientsApi(orgId).catch(() => null)
       ]);
 
+      const freshQueue = await getPendingSyncQueue();
+
       if (prods) setProducts(prods);
+      
       if (ords) {
-        setOrders(ords);
-        await saveLocalOrders(ords);
+        const localCreatedOrders = freshQueue
+          .filter(q => q.type === 'CREATE_ORDER')
+          .map(q => ({
+            ...q.payload,
+            id: q.payload.id || `ord-sync-${Date.now()}`
+          })) as Order[];
+        
+        const mergedOrders = [...localCreatedOrders, ...ords];
+        setOrders(mergedOrders);
+        await saveLocalOrders(mergedOrders);
       }
+      
       if (inv) setInventory(inv);
+      
       if (clis) {
-        setClients(clis);
-        await saveLocalClients(clis);
+        const localCreatedClients = freshQueue
+          .filter(q => q.type === 'CREATE_CLIENT')
+          .map(q => ({
+            ...q.payload,
+            id: q.payload.id || `cli-sync-${Date.now()}`
+          })) as Client[];
+          
+        const mergedClients = [...localCreatedClients, ...clis];
+        setClients(mergedClients);
+        await saveLocalClients(mergedClients);
       }
 
-      const freshQueue = await getPendingSyncQueue();
       setPendingQueue(freshQueue);
     } catch (err: any) {
       console.warn('[Mobile Sync Error]:', err?.message);
@@ -158,37 +182,51 @@ export default function App() {
 
     setIsSyncing(true);
     let successCount = 0;
+    const failedItems: PendingSyncItem[] = [];
+    
     try {
       for (const item of currentQueue) {
-        if (item.type === 'CREATE_ORDER') {
-          await createOrderApi(currentOrg.id, item.payload).catch(() => null);
+        try {
+          if (item.type === 'CREATE_ORDER') {
+            await createOrderApi(currentOrg.id, item.payload);
+          } else if (item.type === 'UPDATE_ORDER_STATUS') {
+            await updateOrderStatusApi(currentOrg.id, item.payload.id, item.payload.status);
+          } else if (item.type === 'CREATE_CLIENT') {
+            await createClientApi(currentOrg.id, item.payload);
+          } else if (item.type === 'UPDATE_CLIENT') {
+            await updateClientApi(currentOrg.id, item.payload.id, item.payload);
+          } else if (item.type === 'PAY_CLIENT_CREDIT') {
+            await payClientCreditApi(currentOrg.id, item.payload.id, item.payload.amount, item.payload.payment_method);
+          } else if (item.type === 'DELETE_CLIENT') {
+            await deleteClientApi(currentOrg.id, item.payload.id);
+          }
           successCount++;
-        } else if (item.type === 'UPDATE_ORDER_STATUS') {
-          await updateOrderStatusApi(currentOrg.id, item.payload.id, item.payload.status).catch(() => null);
-          successCount++;
-        } else if (item.type === 'CREATE_CLIENT') {
-          await createClientApi(currentOrg.id, item.payload).catch(() => null);
-          successCount++;
-        } else if (item.type === 'UPDATE_CLIENT') {
-          await updateClientApi(currentOrg.id, item.payload.id, item.payload).catch(() => null);
-          successCount++;
-        } else if (item.type === 'PAY_CLIENT_CREDIT') {
-          await payClientCreditApi(currentOrg.id, item.payload.id, item.payload.amount, item.payload.payment_method).catch(() => null);
-          successCount++;
-        } else if (item.type === 'DELETE_CLIENT') {
-          await deleteClientApi(currentOrg.id, item.payload.id).catch(() => null);
-          successCount++;
+        } catch (e) {
+          failedItems.push(item);
         }
       }
 
-      await clearPendingSyncQueue();
-      setPendingQueue([]);
+      if (failedItems.length === 0) {
+        await clearPendingSyncQueue();
+        setPendingQueue([]);
+      } else {
+        await setPendingSyncQueue(failedItems);
+        setPendingQueue(failedItems);
+      }
+      
       await syncStoreData(currentOrg.id);
 
-      Alert.alert(
-        'Backend Sync Success',
-        `Successfully synchronized ${successCount} local stored record(s) to cloud PostgreSQL backend!`
-      );
+      if (failedItems.length > 0) {
+        Alert.alert(
+          'Backend Sync Partial Success',
+          `Successfully synchronized ${successCount} record(s). However, ${failedItems.length} record(s) failed and remain in the queue.`
+        );
+      } else {
+        Alert.alert(
+          'Backend Sync Success',
+          `Successfully synchronized ${successCount} local stored record(s) to cloud PostgreSQL backend!`
+        );
+      }
     } catch (err: any) {
       Alert.alert('Sync Exception', err?.message || 'Failed to complete cloud sync');
     } finally {
@@ -350,6 +388,19 @@ export default function App() {
     });
     setPendingQueue(newQueue);
   };
+
+  if (isAuthLoading) {
+    return (
+      <View style={[styles.safeArea, { backgroundColor: colors.steel, justifyContent: 'center', alignItems: 'center' }]}>
+        <StatusBar barStyle={isLineMode ? 'light-content' : 'dark-content'} />
+        <View style={{ width: 80, height: 80, backgroundColor: colors.primary, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+          <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 32, fontFamily: 'monospace' }}>SG</Text>
+        </View>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 20, color: colors.graphite, fontFamily: 'monospace', fontSize: 13 }}>Initializing Session...</Text>
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -566,11 +617,11 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   headerOrgName: { fontSize: 13, fontWeight: 'bold' },
   headerRole: { fontSize: 8.5, fontFamily: 'monospace', marginTop: 1 },
-  syncBtn: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 6, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  syncBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   syncBtnInner: { flexDirection: 'row', alignItems: 'center' },
-  syncBtnText: { fontSize: 9.5, fontWeight: 'bold', fontFamily: 'monospace' },
-  lineToggleBtn: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6, borderWidth: 1 },
-  lineToggleText: { fontSize: 9.5, fontWeight: 'bold', fontFamily: 'monospace' },
+  syncBtnText: { fontSize: 11, fontWeight: 'bold', fontFamily: 'monospace' },
+  lineToggleBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
+  lineToggleText: { fontSize: 11, fontWeight: 'bold', fontFamily: 'monospace' },
   screenContainer: { flex: 1 },
   bottomNav: {
     height: 60,

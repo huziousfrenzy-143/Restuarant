@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share } from 'react-native';
 import { Order, InventoryItem } from '@restaurant-saas/shared-schemas';
 import { LightColors, LineModeColors } from '../theme/colors';
 import { Download, TrendingUp, DollarSign, ShoppingBag, AlertTriangle, Utensils, Package } from 'lucide-react-native';
@@ -49,7 +49,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({ orders, inventory,
   const topProducts = Object.values(itemMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
   const lowStockCount = inventory.filter(i => toNum(i.current_qty) <= toNum(i.reorder_level)).length;
 
-  const handleExportCSVReport = () => {
+  const handleExportCSVReport = async () => {
     const header = 'Metric,Value\n';
     const rows = [
       `Total Gross Sales Revenue,${totalGrossRevenue.toFixed(2)}`,
@@ -64,10 +64,16 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({ orders, inventory,
       `Low Stock Alerts,${lowStockCount}`
     ].join('\n');
 
-    Alert.alert(
-      'Report Export Ready',
-      `Financial Report CSV generated (${rows.split('\n').length} metrics).\n\nCSV Summary:\nGross Revenue: $${totalGrossRevenue.toFixed(2)}\nOrders: ${totalOrders}`
-    );
+    const csvContent = header + rows;
+
+    try {
+      await Share.share({
+        message: csvContent,
+        title: 'Financial Report',
+      });
+    } catch (error: any) {
+      Alert.alert('Export Failed', error.message);
+    }
   };
 
   return (

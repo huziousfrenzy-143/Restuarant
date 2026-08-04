@@ -8,6 +8,11 @@
     "ios": {
       "supportsTablet": true
     },
-    "sdkVersion": "52.0.0"
+    "sdkVersion": "52.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "dbcc26f1-5df3-4bb6-afbf-249e7234c656"
+      }
+    }
   }
 }

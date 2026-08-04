@@ -216,16 +216,16 @@ const styles = StyleSheet.create({
   errorDismissBtn: { position: 'absolute', top: 10, right: 10, padding: 4 },
   formGroup: { marginBottom: 14 },
   label: { fontSize: 9.5, fontWeight: 'bold', marginBottom: 6, letterSpacing: 0.5, fontFamily: 'monospace' },
-  input: { height: 46, borderRadius: 8, borderWidth: 1, paddingHorizontal: 14, fontSize: 14 },
-  otpInput: { fontSize: 22, fontWeight: 'bold', letterSpacing: 8, textAlign: 'center' },
-  button: { height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 6 },
-  buttonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 12, letterSpacing: 0.5, fontFamily: 'monospace' },
-  otpBanner: { marginBottom: 14, alignItems: 'center' },
-  otpTitle: { fontSize: 16, fontWeight: 'bold' },
-  otpSub: { fontSize: 12, marginTop: 2, fontFamily: 'monospace' },
-  backBtn: { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  backBtnText: { fontSize: 11, fontFamily: 'monospace' },
-  demoBanner: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  demoText: { fontSize: 10.5, fontFamily: 'monospace' }
+  input: { height: 50, borderRadius: 10, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
+  otpInput: { fontSize: 24, fontWeight: 'bold', letterSpacing: 10, textAlign: 'center' },
+  button: { height: 52, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 10, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3 },
+  buttonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 13, letterSpacing: 0.5, fontFamily: 'monospace' },
+  otpBanner: { marginBottom: 16, alignItems: 'center' },
+  otpTitle: { fontSize: 18, fontWeight: 'bold' },
+  otpSub: { fontSize: 13, marginTop: 4, fontFamily: 'monospace' },
+  backBtn: { marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 8 },
+  backBtnText: { fontSize: 12, fontFamily: 'monospace' },
+  demoBanner: { marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  demoText: { fontSize: 11, fontFamily: 'monospace' }
 });
 

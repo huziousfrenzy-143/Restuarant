@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
-    "@react-native-async-storage/async-storage": "2.1.0",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@restaurant-saas/shared-schemas": "file:../../packages/shared-schemas",
     "@restaurant-saas/ui": "file:../../packages/ui",
     "expo": "~52.0.0",
@@ -31,7 +31,8 @@
     "@babel/core": "^7.25.0",
     "@types/react": "~18.3.12",
     "@types/react-native": "~0.72.8",
-    "babel-preset-expo": "*",
+    "babel-preset-expo": "~12.0.0",
+    "hermes-parser": "^0.23.1",
     "typescript": "^5.3.3"
   }
 }

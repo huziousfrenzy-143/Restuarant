@@ -108,3 +108,7 @@ export async function addPendingSyncItem(item: Omit<PendingSyncItem, 'id' | 'tim
 export async function clearPendingSyncQueue(): Promise<void> {
   await saveLocalItem(STORAGE_KEYS.PENDING_QUEUE, []);
 }
+
+export async function setPendingSyncQueue(queue: PendingSyncItem[]): Promise<void> {
+  await saveLocalItem(STORAGE_KEYS.PENDING_QUEUE, queue);
+}

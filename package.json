@@ -18,7 +18,8 @@
     "build:org": "npm run build:packages && npm --prefix apps/org-admin run build",
     "build:super": "npm run build:packages && npm --prefix apps/super-admin run build",
     "build": "npm run build:packages && npm run build --workspaces",
-    "vercel-build": "npm run build:shared && npm --prefix apps/api run build"
+    "vercel-build": "npm run build:shared && npm --prefix apps/api run build",
+    "postinstall": "npm run build:packages"
   },
   "keywords": [
     "restaurant",
