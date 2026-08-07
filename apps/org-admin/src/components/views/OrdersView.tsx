@@ -3,20 +3,16 @@ import { Order, OrderItem, OrderStatus, Product } from '@restaurant-saas/shared-
 import { formatCurrency, getOrderStatusMeta } from '@restaurant-saas/ui';
 import { Search, Filter, X, Clock, User, ChevronRight, Plus, Minus, Trash2, Edit3, Save } from 'lucide-react';
 import { Pagination } from '../common/Pagination';
+import { useOrdersController } from '../../features/orders/useOrdersController';
 
-interface OrdersViewProps {
-  orders: Order[];
-  products: Product[];
-  onUpdateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  onUpdateOrderItems: (orderId: string, items: OrderItem[]) => void;
-}
+export const OrdersView: React.FC = () => {
+  const {
+    orders,
+    products,
+    onUpdateOrderStatus,
+    onUpdateOrderItems
+  } = useOrdersController();
 
-export const OrdersView: React.FC<OrdersViewProps> = ({
-  orders,
-  products,
-  onUpdateOrderStatus,
-  onUpdateOrderItems
-}) => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);

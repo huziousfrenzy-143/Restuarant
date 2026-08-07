@@ -20,23 +20,17 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Pagination } from '../../components/common/Pagination';
 import { downloadCsv } from '../../utils/exportCsv';
 
-interface ClientsViewProps {
-  clients: Client[];
-  onAddClient: (newClient: any) => void;
-  onUpdateClient: (id: string, updates: any) => void;
-  onDeleteClient: (id: string) => void;
-  onPayCreditBalance?: (id: string, amount: number, paymentMethod: string) => Promise<void>;
-  onRefreshData?: () => void;
-}
+import { useClientsController } from './useClientsController';
 
-export const ClientsView: React.FC<ClientsViewProps> = ({
-  clients,
-  onAddClient,
-  onUpdateClient,
-  onDeleteClient,
-  onPayCreditBalance,
-  onRefreshData
-}) => {
+export const ClientsView: React.FC = () => {
+  const {
+    clients,
+    onAddClient,
+    onUpdateClient,
+    onDeleteClient,
+    onPayCreditBalance,
+    onRefreshData
+  } = useClientsController();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [payCreditClient, setPayCreditClient] = useState<Client | null>(null);

@@ -75,13 +75,16 @@ export class AuthController {
 
   // Direct Staff Login
   static async loginStaff(req: Request, res: Response) {
-    const { email, targetOrgId } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Email address is required' } });
+    const { email, password, targetOrgId } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' } });
     }
 
-    const result = await AuthService.loginStaff(email, targetOrgId);
+    const result = await AuthService.loginStaff(email, password, targetOrgId);
     if (result.error) {
+      if (result.requiresOtp) {
+        return res.json({ data: { requiresOtp: true } });
+      }
       return res.status(401).json({ error: { code: 'AUTH_FAILED', message: result.error } });
     }
 

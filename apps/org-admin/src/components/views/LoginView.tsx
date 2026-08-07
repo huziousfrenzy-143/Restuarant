@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { Lock, Mail, ArrowRight, CheckCircle2, Sparkles, Utensils } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
 import { saveAuthToken } from '../../utils/cookieUtils';
+import { LoginViewProps } from './LoginView.types';
 
-interface LoginViewProps {
-  onLoginSuccess: (user: any, accessToken: string, refreshToken: string) => void;
-}
+
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [step, setStep] = useState<'request_otp' | 'verify_otp'>('request_otp');
@@ -16,35 +15,47 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Step 1: Request Email OTP for Staff
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+      // 1. Attempt standard login
+      const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
 
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error?.message || 'Login failed');
+      const loginJson = await loginRes.json();
+      if (!loginRes.ok) {
+        throw new Error(loginJson.error?.message || 'Login failed');
       }
 
-      if (json.data?.directLogin) {
-        const accessToken = json.data.accessToken || 'demo-access-token';
-        const refreshToken = json.data.refreshToken || 'demo-refresh-token';
-        saveAuthToken(accessToken, refreshToken, json.data.user);
-        onLoginSuccess(json.data.user, accessToken, refreshToken);
+      // 2. If backend requires OTP (Admin/Owner), trigger OTP request
+      if (loginJson.data?.requiresOtp) {
+        const otpRes = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const otpJson = await otpRes.json();
+        if (!otpRes.ok) {
+          throw new Error(otpJson.error?.message || 'Failed to send OTP');
+        }
+        
+        setSuccessMsg(`Security OTP verification code emailed to ${email}! Check your inbox.`);
+        setStep('verify_otp');
         return;
       }
 
-      setSuccessMsg(`Security OTP verification code emailed to ${email}! Check your inbox.`);
-      setStep('verify_otp');
+      // 3. Otherwise, standard staff login succeeded directly
+      const accessToken = loginJson.data.accessToken;
+      const refreshToken = loginJson.data.refreshToken;
+      saveAuthToken(accessToken, refreshToken, loginJson.data.user);
+      onLoginSuccess(loginJson.data.user, accessToken, refreshToken);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error connecting to authentication service');
     } finally {
@@ -106,7 +117,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         {/* Step 1: Request OTP Form */}
         {step === 'request_otp' && (
-          <form onSubmit={handleRequestOtp} className="p-6 space-y-4">
+          <form onSubmit={handleLogin} className="p-6 space-y-4">
             {errorMsg && (
               <div className="p-3 rounded bg-red-50 border border-red-200 text-[#C1440E] text-xs font-semibold">
                 {errorMsg}

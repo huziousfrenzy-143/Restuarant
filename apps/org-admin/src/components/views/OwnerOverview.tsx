@@ -5,13 +5,7 @@ import { DollarSign, ShoppingBag, AlertTriangle, Clock, ArrowUpRight, TrendingUp
 import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '../../store/useAppStore';
 import { salesApi } from '../../api/sales.api';
-
-interface OwnerOverviewProps {
-  orders: Order[];
-  inventory: InventoryItem[];
-  onSelectTab: (tab: string) => void;
-  isLineMode: boolean;
-}
+import { OwnerOverviewProps } from './OwnerOverview.types';
 
 export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ orders, inventory, onSelectTab, isLineMode }) => {
   const { org } = useAppStore();
@@ -30,7 +24,6 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ orders, inventory,
     enabled: !!orgId,
     refetchInterval: 30000 // Refetch every 30s to keep Dashboard live
   });
-
 
 return (
   <div className="p-6 space-y-6 flex-1 overflow-y-auto">

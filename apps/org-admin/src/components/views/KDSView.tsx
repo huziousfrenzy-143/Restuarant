@@ -2,11 +2,7 @@ import React from 'react';
 import { Order, OrderStatus } from '@restaurant-saas/shared-schemas';
 import { getOrderStatusMeta } from '@restaurant-saas/ui';
 import { Flame, Clock, CheckCircle, AlertTriangle, Play, ChevronRight } from 'lucide-react';
-
-interface KDSViewProps {
-  orders: Order[];
-  onUpdateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
-}
+import { KDSViewProps } from './KDSView.types';
 
 export const KDSView: React.FC<KDSViewProps> = ({ orders, onUpdateOrderStatus }) => {
   // Kitchen cares about active non-completed orders: new, preparing, ready

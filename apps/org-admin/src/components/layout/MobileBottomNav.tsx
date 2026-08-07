@@ -1,14 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, ShoppingCart, Flame, ClipboardList, Menu } from 'lucide-react';
 import { UserRole } from '@restaurant-saas/shared-schemas';
-
-interface MobileBottomNavProps {
-  activeTab: string;
-  onSelectTab: (tab: string) => void;
-  onToggleMobileMenu: () => void;
-  userRole?: UserRole;
-  isLineMode: boolean;
-}
+import { MobileBottomNavProps } from './MobileBottomNav.types';
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeTab,

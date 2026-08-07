@@ -4,16 +4,7 @@ import { formatCurrency, getInventoryStatusMeta } from '@restaurant-saas/ui';
 import { Boxes, Plus, ArrowDownRight, ArrowUpRight, AlertTriangle, ShieldCheck, RefreshCw, X, PackagePlus, Edit2, Trash2 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { FormErrorAlert } from '../common/FormErrorAlert';
-
-interface InventoryViewProps {
-  inventory: InventoryItem[];
-  movements: InventoryMovement[];
-  products: Product[];
-  onLogMovement: (itemId: string, type: 'purchase' | 'wastage' | 'adjustment', qty: number) => void;
-  onAddInventoryItem: (newItem: any) => void;
-  onUpdateInventoryItem: (id: string, updates: any) => void;
-  onDeleteInventoryItem: (id: string) => void;
-}
+import { InventoryViewProps } from './InventoryView.types';
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
   inventory,

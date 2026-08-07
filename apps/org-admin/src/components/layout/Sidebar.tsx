@@ -14,15 +14,9 @@ import {
   X
 } from 'lucide-react';
 import { UserRole } from '@restaurant-saas/shared-schemas';
+import { SidebarProps } from './Sidebar.types';
 
-interface SidebarProps {
-  activeTab: string;
-  onSelectTab: (tab: string) => void;
-  isLineMode: boolean;
-  userRole?: UserRole;
-  onCloseMobileDrawer?: () => void;
-  isMobileDrawer?: boolean;
-}
+
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,

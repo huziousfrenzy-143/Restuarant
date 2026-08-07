@@ -1,142 +1,45 @@
-import React, { useState } from 'react';
-import { Product, ProductCategory, OrderItem, Client, PaymentMethod } from '@restaurant-saas/shared-schemas';
+import React from 'react';
 import { formatCurrency } from '@restaurant-saas/ui';
 import { Search, Plus, Minus, Trash2, CreditCard, CheckCircle2, User, Sparkles, Printer, X, Wallet, BookOpen, AlertCircle, Banknote, Zap, Info, ShoppingCart } from 'lucide-react';
+import { usePOSController } from '../../features/pos/usePOSController';
 
-interface POSViewProps {
-  products: Product[];
-  categories: ProductCategory[];
-  clients: Client[];
-  paymentMethods: PaymentMethod[];
-  onCompleteOrder: (newOrder: any, paymentMethod: string, amountPaid: number) => void;
-  isLineMode: boolean;
-  taxRate?: number;
-}
+export const POSView: React.FC = () => {
 
-export const POSView: React.FC<POSViewProps> = ({
-  products,
-  categories,
-  clients,
-  paymentMethods,
-  onCompleteOrder,
-  isLineMode,
-  taxRate = 10
-}) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [cart, setCart] = useState<OrderItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [clientSearchQuery, setClientSearchQuery] = useState('');
-  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>('dine_in');
-  const [tableNo, setTableNo] = useState('T4');
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [isChargeModalOpen, setIsChargeModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
-  const [lastReceipt, setLastReceipt] = useState<any>(null);
-  const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
-
-  // Filter products
-  const filteredProducts = products.filter(p => {
-    const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  // Filter clients by search query
-  const filteredClients = clients.filter(c =>
-    c.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
-    c.phone.includes(clientSearchQuery)
-  );
-
-  const selectedClient = clients.find(c => c.id === selectedClientId);
-
-  const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.product_id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.product_id === product.id
-            ? { ...item, qty: item.qty + 1 }
-            : item
-        );
-      }
-      return [
-        ...prev,
-        {
-          id: `oi-${Date.now()}-${product.id}`,
-          product_id: product.id,
-          product_name: product.name,
-          qty: 1,
-          unit_price: product.price
-        }
-      ];
-    });
-  };
-
-  const updateQty = (productId: string, delta: number) => {
-    setCart(prev =>
-      prev
-        .map(item => {
-          if (item.product_id === productId) {
-            const newQty = item.qty + delta;
-            return newQty > 0 ? { ...item, qty: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as OrderItem[]
-    );
-  };
-
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product_id !== productId));
-  };
-
-  const getCategoryName = (categoryId: string): string => {
-    const match = categories?.find(c => c.id === categoryId);
-    return match ? match.name : 'Unknown Category';
-  }
-
-
-  const [customTaxPercent, setCustomTaxPercent] = useState<number | null>(null);
-  const activeTaxRate = customTaxPercent !== null ? customTaxPercent : taxRate;
-
-  const subtotal = cart.reduce((sum, item) => sum + item.qty * item.unit_price, 0);
-  const discountAmount = (subtotal * discountPercent) / 100;
-  const taxableTotal = Math.max(0, subtotal - discountAmount);
-  const tax = (taxableTotal * activeTaxRate) / 100;
-  const totalPayable = taxableTotal + tax;
-
-  const handleChargeSubmit = () => {
-    if (cart.length === 0) return;
-
-    const newOrder = {
-      order_number: `#ORD-${Math.floor(100 + Math.random() * 900)}`,
-      type: orderType,
-      table_no: orderType === 'dine_in' ? tableNo : undefined,
-      client_id: selectedClientId || undefined,
-      client_name: selectedClient ? selectedClient.name : 'Walk-in Guest',
-      client_phone: selectedClient ? selectedClient.phone : undefined,
-      items: cart,
-      subtotal,
-      discount: discountAmount,
-      tax,
-      total: totalPayable,
-      status: 'new'
-    };
-
-    onCompleteOrder(newOrder, paymentMethod, totalPayable);
-
-    // Save for print receipt popup
-    setLastReceipt({ ...newOrder, paymentMethod, created_at: new Date().toISOString() });
-
-    // Reset state
-    setCart([]);
-    setDiscountPercent(0);
-    setCustomTaxPercent(null);
-    setSelectedClientId('');
-    setIsChargeModalOpen(false);
-    setIsMobileCartOpen(false);
-  };
+  const {
+    products,
+    categories,
+    clients,
+    paymentMethods,
+    isLineMode,
+    activeTaxRate,
+    selectedCategory, setSelectedCategory,
+    cart, setCart,
+    searchQuery, setSearchQuery,
+    clientSearchQuery, setClientSearchQuery,
+    orderType, setOrderType,
+    tableNo, setTableNo,
+    selectedClientId, setSelectedClientId,
+    discountPercent, setDiscountPercent,
+    isChargeModalOpen, setIsChargeModalOpen,
+    paymentMethod, setPaymentMethod,
+    lastReceipt, setLastReceipt,
+    isMobileCartOpen, setIsMobileCartOpen,
+    customTaxPercent, setCustomTaxPercent,
+    filteredProducts,
+    filteredClients,
+    selectedClient,
+    addToCart,
+    updateQty,
+    removeFromCart,
+    getCategoryName,
+    subtotal,
+    discountAmount,
+    taxableTotal,
+    tax,
+    totalPayable,
+    handleChargeSubmit
+  } = usePOSController();
+  console.log(clientSearchQuery);
 
   return (
     <div className="flex flex-col md:flex-row flex-1 min-h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] overflow-hidden font-sans relative">
@@ -346,12 +249,18 @@ export const POSView: React.FC<POSViewProps> = ({
               onChange={e => setSelectedClientId(e.target.value)}
               className="w-full p-1.5 rounded border border-mist bg-surface text-xs font-mono text-ink font-semibold"
             >
-              <option value="">Walk-in Customer</option>
+              {
+                !clientSearchQuery.length && <option value="">Walk-in Customer</option>
+              }
+              {
+                filteredClients.length === 0 && <option value="">No customer found</option>
+              }
               {filteredClients.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.phone}) {c.credit_balance > 0 ? `· Due: ${formatCurrency(c.credit_balance)}` : ''}
+                  {c.name} ({c.phone.slice(0, 7) + "..."}) {c.credit_balance > 0 ? `Due: ${formatCurrency(c.credit_balance)}` : ''}
                 </option>
-              ))}
+              ))
+              }
             </select>
           </div>
         </div>
@@ -585,7 +494,7 @@ export const POSView: React.FC<POSViewProps> = ({
                 <span>{formatCurrency(lastReceipt.subtotal)}</span>
               </div>
               <div className="flex justify-between text-graphite">
-                <span>Tax ({taxRate}%)</span>
+                <span>Tax ({activeTaxRate}%)</span>
                 <span>{formatCurrency(lastReceipt.tax)}</span>
               </div>
               <div className="flex justify-between font-bold text-ink text-sm pt-1 border-t border-mist">

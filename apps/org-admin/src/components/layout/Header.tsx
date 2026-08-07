@@ -2,22 +2,9 @@ import React, { useState } from 'react';
 import { getSubscriptionStatusMeta } from '@restaurant-saas/ui';
 import { SubscriptionStatus } from '@restaurant-saas/shared-schemas';
 import { Moon, Sun, Search, LogOut, Building2, ChevronDown, Check, RefreshCw, Menu } from 'lucide-react';
+import { HeaderProps } from './Header.types';
 
-interface HeaderProps {
-  orgName: string;
-  subscriptionStatus: SubscriptionStatus;
-  subscriptionExpiresAt: string;
-  isLineMode: boolean;
-  onToggleLineMode: () => void;
-  activeTab: string;
-  onSearchOpen: () => void;
-  currentUser: any;
-  userOrgs?: any[];
-  activeOrgId?: string;
-  onSwitchOrg?: (targetOrgId: string) => void;
-  onToggleMobileMenu?: () => void;
-  onLogout: () => void;
-}
+
 
 export const Header: React.FC<HeaderProps> = ({
   orgName,

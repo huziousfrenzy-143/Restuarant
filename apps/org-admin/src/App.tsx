@@ -255,15 +255,7 @@ function MainApp() {
         );
       case 'pos':
         return (
-          <POSView
-            products={products}
-            categories={categories}
-            clients={clients}
-            paymentMethods={paymentMethods}
-            onCompleteOrder={handleCompletePosOrder}
-            taxRate={Number(org.tax_rate) || 10}
-            isLineMode={isLineMode}
-          />
+          <POSView />
         );
       case 'kds':
         return (
@@ -274,12 +266,7 @@ function MainApp() {
         );
       case 'orders':
         return (
-          <OrdersView
-            orders={orders}
-            products={products}
-            onUpdateOrderStatus={(id, status) => runAction(`Updating Order Status (${status})...`, () => updateOrderStatusMut.mutateAsync({ orderId: id, status }))}
-            onUpdateOrderItems={(id, items) => runAction('Updating Order Items...', () => updateOrderItemsMut.mutateAsync({ orderId: id, items }))}
-          />
+          <OrdersView />
         );
       case 'inventory':
         return (
@@ -304,28 +291,11 @@ function MainApp() {
         );
       case 'products':
         return (
-          <ProductsView
-            categories={categories}
-            products={products}
-            inventory={inventory}
-            onAddProduct={(input) => runAction('Saving Product...', () => addProductMut.mutateAsync(input))}
-            onUpdateProduct={(id, updates) => runAction('Updating Product...', () => updateProductMut.mutateAsync({ id, updates }))}
-            onDeleteProduct={(id) => runAction('Deleting Product...', () => deleteProductMut.mutateAsync(id))}
-            onAddCategory={(input) => runAction('Saving Category...', () => addCategoryMut.mutateAsync(input))}
-            onUpdateCategory={(id, updates) => runAction('Updating Category...', () => updateCategoryMut.mutateAsync({ id, updates }))}
-            onDeleteCategory={(id) => runAction('Deleting Category...', () => deleteCategoryMut.mutateAsync(id))}
-          />
+          <ProductsView />
         );
       case 'clients':
         return (
-          <ClientsView
-            clients={clients}
-            onAddClient={(input) => runAction('Saving Customer Profile...', () => addClientMut.mutateAsync(input))}
-            onUpdateClient={(id, updates) => runAction('Updating Customer Profile...', () => updateClientMut.mutateAsync({ id, updates }))}
-            onDeleteClient={(id) => runAction('Deleting Customer Profile...', () => deleteClientMut.mutateAsync(id))}
-            onPayCreditBalance={(clientId, amount, paymentMethod) => runAction('Recording Credit Settlement...', () => payCreditMut.mutateAsync({ clientId, amount, paymentMethod }))}
-            onRefreshData={() => refetchClients()}
-          />
+          <ClientsView />
         );
       case 'ledger':
         return (

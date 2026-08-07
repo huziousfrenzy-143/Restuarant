@@ -1,11 +1,6 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-
-interface FormErrorAlertProps {
-  message: string;
-  onDismiss?: () => void;
-  className?: string;
-}
+import { FormErrorAlertProps } from './FormErrorAlert.types';
 
 export const FormErrorAlert: React.FC<FormErrorAlertProps> = ({ message, onDismiss, className = '' }) => {
   if (!message) return null;

@@ -3,18 +3,7 @@ import { Organization, PaymentMethod, LedgerAccount } from '@restaurant-saas/sha
 import { getSubscriptionStatusMeta } from '@restaurant-saas/ui';
 import { Settings, ShieldCheck, AlertTriangle, Building, Phone, MapPin, Database, Key, Lock, Check, Save, CreditCard, Trash2, Percent, Layers, ArrowRight, RefreshCw } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
-
-interface SettingsViewProps {
-  org: Organization;
-  userOrgs?: any[];
-  currentUser?: any;
-  onSwitchOrg?: (targetOrgId: string) => void;
-  paymentMethods?: PaymentMethod[];
-  accounts?: LedgerAccount[];
-  onChangePassword?: (curr: string, next: string) => Promise<{ success: boolean; message: string }>;
-  onUpdateOrg?: (updates: { name: string; phone: string; address: string; tax_rate: number }) => void;
-  onDeletePaymentMethod?: (id: string) => void;
-}
+import { SettingsViewProps } from './SettingsView.types';
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   org,

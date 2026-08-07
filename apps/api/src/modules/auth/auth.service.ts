@@ -215,15 +215,7 @@ export class AuthService {
     }
 
     if (user.role !== 'admin' && user.role !== 'owner') {
-      const loginResult = await this.loginStaff(email);
-      if (loginResult.error) {
-         return { success: false, message: loginResult.error };
-      }
-      return {
-        success: true,
-        directLogin: true,
-        ...loginResult
-      };
+      return { success: false, message: 'Staff accounts must use the standard login endpoint, not OTP.' };
     }
 
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -299,7 +291,7 @@ export class AuthService {
   }
 
   // 5. Direct Staff Login with Multi-Tenant Orgs List
-  static async loginStaff(email: string, targetOrgId?: string) {
+  static async loginStaff(email: string, password?: string, targetOrgId?: string) {
     const isSuperAdmin = Boolean(await this.findSuperAdminUser(email));
     if (isSuperAdmin) {
       return { error: 'Super Admin accounts must use the Super Admin portal.' };
@@ -315,6 +307,18 @@ export class AuthService {
       : allMatches[0];
 
     const { user, org } = activeMatch;
+
+    if (user.role === 'admin' || user.role === 'owner') {
+      return { requiresOtp: true, error: 'Admin accounts must log in using OTP verification.' };
+    }
+
+    if (password) {
+      const storedHash = user.password_hash || 'password123';
+      if (!verifyPassword(password, storedHash)) {
+        return { error: 'Invalid password. Please check your credentials.' };
+      }
+    }
+
     const userOrgs = allMatches.map(m => m.org);
 
     const payload = {

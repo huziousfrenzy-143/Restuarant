@@ -17,15 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 import { downloadCsv } from '../../utils/exportCsv';
-
-interface ReportsViewProps {
-  orders: Order[];
-  inventory: InventoryItem[];
-  sales: Sale[];
-  onRefreshData?: () => void;
-}
-
-type TimeFilter = 'today' | 'week' | 'month' | 'all';
+import { ReportsViewProps, TimeFilter } from './ReportsView.types';
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sales, onRefreshData }) => {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
@@ -206,8 +198,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
     1
   );
 
-
-
   const handleRefreshClick = async () => {
     if (onRefreshData) {
       setIsRefreshing(true);
@@ -238,7 +228,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
 
     return d;
   }, [chartData, maxChartRevenue]);
-
 
   const handleExportCsv = () => {
     const exportRows = filteredOrders.map(o => ({

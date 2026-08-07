@@ -25,15 +25,7 @@ import {
 } from 'lucide-react';
 import { downloadCsv } from '../../utils/exportCsv';
 import { Pagination } from '../common/Pagination';
-
-interface SalesViewProps {
-  orders: Order[];
-  sales: Sale[];
-  paymentMethods: PaymentMethod[];
-  onRefreshData?: () => void;
-}
-
-type TimeFilter = 'today' | 'week' | 'month' | 'all';
+import { SalesViewProps, TimeFilter } from './SalesView.types';
 
 export const SalesView: React.FC<SalesViewProps> = ({
   orders,

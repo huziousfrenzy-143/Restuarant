@@ -7,29 +7,20 @@ import { Pagination } from '../common/Pagination';
 import { FormErrorAlert } from '../common/FormErrorAlert';
 import { API_BASE_URL } from '../../config/api';
 
-interface ProductsViewProps {
-  products: Product[];
-  categories: ProductCategory[];
-  inventory: InventoryItem[];
-  onAddProduct: (newProd: any) => void;
-  onUpdateProduct: (id: string, updates: any) => void;
-  onDeleteProduct: (id: string) => void;
-  onAddCategory: (newCat: any) => void;
-  onUpdateCategory: (id: string, updates: any) => void;
-  onDeleteCategory: (id: string) => void;
-}
+import { useProductsController } from '../../features/products/useProductsController';
 
-export const ProductsView: React.FC<ProductsViewProps> = ({
-  products,
-  categories,
-  inventory,
-  onAddProduct,
-  onUpdateProduct,
-  onDeleteProduct,
-  onAddCategory,
-  onUpdateCategory,
-  onDeleteCategory
-}) => {
+export const ProductsView: React.FC = () => {
+  const {
+    products,
+    categories,
+    inventory,
+    onAddProduct,
+    onUpdateProduct,
+    onDeleteProduct,
+    onAddCategory,
+    onUpdateCategory,
+    onDeleteCategory
+  } = useProductsController();
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
