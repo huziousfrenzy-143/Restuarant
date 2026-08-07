@@ -19,6 +19,8 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token as string;
   } else if (req.cookies && (req.cookies.org_admin_token || req.cookies.super_admin_token || req.cookies.token)) {
     token = req.cookies.org_admin_token || req.cookies.super_admin_token || req.cookies.token;
   } else if (req.headers.cookie) {

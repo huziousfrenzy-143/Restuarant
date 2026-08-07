@@ -13,8 +13,11 @@ export function useAppRealtime(orgId: string) {
   useEffect(() => {
     if (!orgId) return;
 
-    // Use withCredentials: true so that the browser sends the auth cookies automatically.
-    const source = new EventSource(`${API_BASE_URL}/${orgId}/stream`, { withCredentials: true });
+    // Retrieve token to authenticate the stream
+    const token = localStorage.getItem('org_admin_token') || '';
+
+    // Pass token in URL query because EventSource cannot set Authorization headers
+    const source = new EventSource(`${API_BASE_URL}/${orgId}/stream?token=${token}`, { withCredentials: true });
 
     source.onmessage = (event) => {
       try {
