@@ -77,7 +77,6 @@ import {
   useAddPaymentMethodMutation,
   useUpdatePaymentMethodMutation,
   useDeletePaymentMethodMutation,
-  useSettingsQuery,
   useUpdateSettingsMutation
 } from './features/settings/useSettingsQuery';
 
