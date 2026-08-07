@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { CreateTaskInputSchema, Task } from '@restaurant-saas/shared-schemas';
 import { TenantRequest } from '../../middlewares/tenant.middleware';
 import { TenantDbHelper } from '../../db/tenant-connection';
+import { eventBus } from '../../utils/event-bus';
 
 export class TaskRepository {
   static async findAll(client: PoolClient): Promise<Task[]> {
@@ -103,6 +104,12 @@ export class TaskController {
 
     const createdBy = req.user?.name || 'Owner';
     const task = await TaskService.createTask(req.tenantDb, parse.data, createdBy);
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'tasks');
+    }
+
     res.status(201).json({ data: task, message: 'Task assigned' });
   }
 
@@ -115,6 +122,12 @@ export class TaskController {
     if (!updated) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'tasks');
+    }
+
     res.json({ data: updated, message: 'Task updated successfully' });
   }
 
@@ -127,6 +140,12 @@ export class TaskController {
     if (!success) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'tasks');
+    }
+
     res.json({ message: 'Task deleted successfully' });
   }
 
@@ -142,6 +161,12 @@ export class TaskController {
     if (!updated) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Task not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'tasks');
+    }
+
     res.json({ data: updated });
   }
 }

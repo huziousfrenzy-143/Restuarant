@@ -8,8 +8,7 @@ export function useOrdersQuery(orgId: string) {
   return useQuery({
     queryKey: ORDERS_QUERY_KEY(orgId),
     queryFn: () => ordersApi.getAll(orgId),
-    enabled: Boolean(orgId),
-    refetchInterval: 10000 // Poll KDS/Orders every 10s for real-time kitchen updates
+    enabled: Boolean(orgId)
   });
 }
 
@@ -19,6 +18,18 @@ export function useCreateOrderMutation(orgId: string) {
     mutationFn: (orderData: any) => ordersApi.create(orgId, orderData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY(orgId) });
+    }
+  });
+}
+
+export function useCheckoutMutation(orgId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: any) => ordersApi.checkout(orgId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY(orgId) });
+      queryClient.invalidateQueries({ queryKey: ['sales', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['clients', orgId] });
     }
   });
 }

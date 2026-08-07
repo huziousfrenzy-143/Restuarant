@@ -18,6 +18,7 @@ import auditLogRoutes from './modules/audit-log/audit-log.routes';
 import userRoutes from './modules/users/user.routes';
 import paymentMethodRoutes from './modules/payment-methods/payment-method.routes';
 import uploadRoutes from './modules/upload/upload.routes';
+import streamRoutes from './modules/stream/stream.routes';
 
 import { authMiddleware, requireRole } from './middlewares/auth.middleware';
 import { tenantMiddleware, subscriptionMiddleware } from './middlewares/tenant.middleware';
@@ -109,6 +110,7 @@ app.use('/api/v1/:orgId/ledger', authMiddleware, tenantMiddleware, subscriptionM
 app.use('/api/v1/:orgId/clients', authMiddleware, tenantMiddleware, subscriptionMiddleware, clientRoutes);
 app.use('/api/v1/:orgId/tasks', authMiddleware, tenantMiddleware, subscriptionMiddleware, taskRoutes);
 app.use('/api/v1/:orgId/audit-log', authMiddleware, tenantMiddleware, subscriptionMiddleware, requireRole('admin', 'owner'), auditLogRoutes);
+app.use('/api/v1/:orgId/stream', authMiddleware, tenantMiddleware, subscriptionMiddleware, streamRoutes);
 
 // Lazy database initialization middleware for Vercel serverless cold-starts
 let isDbInitStarted = false;

@@ -1,6 +1,8 @@
 import { OrderRepository } from './order.repository';
 import { OrderStatus, OrderItem } from '@restaurant-saas/shared-schemas';
 import { TenantDbHelper } from '../../db/tenant-connection';
+import { SaleRepository } from '../sales/sale.repository';
+import { ClientRepository } from '../clients/client.service';
 
 export class OrderService {
   static async getOrders(tenantDb: TenantDbHelper) {
@@ -109,5 +111,73 @@ export class OrderService {
 
   static async updateOrderStatus(tenantDb: TenantDbHelper, orderId: string, status: OrderStatus) {
     return await tenantDb(async (client) => OrderRepository.updateStatus(client, orderId, status));
+  }
+
+  static async checkout(tenantDb: TenantDbHelper, payload: any, createdBy: string, cashierName: string) {
+    return await tenantDb(async (client) => {
+      // 1. Create Order and handle inventory deduction (reusing the logic we already have in createOrder via OrderRepository)
+      const order = await OrderRepository.create(client, payload, createdBy);
+
+      // Recipe auto-deduction logic inside same PostgreSQL transaction
+      if (order.items && Array.isArray(order.items)) {
+        for (const item of order.items) {
+          const prodRes = await client.query(
+            `SELECT recipe FROM products WHERE id = $1 LIMIT 1`,
+            [item.product_id]
+          );
+          const prod = prodRes.rows[0];
+          if (prod && prod.recipe && Array.isArray(prod.recipe)) {
+            for (const rec of prod.recipe) {
+              const invRes = await client.query(
+                `SELECT id, name, current_qty, reorder_level FROM inventory_items WHERE id = $1 LIMIT 1`,
+                [rec.inventory_item_id]
+              );
+              const inv = invRes.rows[0];
+              if (inv) {
+                const deductedQty = -(rec.qty_required * item.qty);
+                const newQty = Math.max(0, Number(inv.current_qty) + deductedQty);
+                const newStatus = newQty <= 0 ? 'out_of_stock' : newQty <= inv.reorder_level ? 'low_stock' : 'in_stock';
+
+                await client.query(
+                  `UPDATE inventory_items SET current_qty = $1, status = $2 WHERE id = $3`,
+                  [newQty, newStatus, inv.id]
+                );
+
+                await client.query(
+                  `INSERT INTO inventory_movements (id, item_id, item_name, type, qty, reference_id, created_by, created_at)
+                   VALUES ($1, $2, $3, 'sale_deduction', $4, $5, 'POS Auto-Deduct', NOW())`,
+                  [`mov-${Date.now()}-${inv.id}`, inv.id, inv.name, deductedQty, order.order_number]
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Create Sale
+      const salePayload = {
+        order_id: order.id,
+        payment_method: payload.payment_method,
+        amount_paid: order.total,
+        amount_due: 0
+      };
+      
+      const sale = await SaleRepository.create(client, salePayload, createdBy, cashierName);
+
+      // 3. Update Client Credit Balance if borrow_credit
+      let updatedClient = null;
+      if (payload.payment_method === 'borrow_credit' && payload.client_id) {
+        // Fetch current client balance
+        const cliRes = await client.query(`SELECT id, credit_balance FROM clients WHERE id = $1 LIMIT 1`, [payload.client_id]);
+        const targetClient = cliRes.rows[0];
+        
+        if (targetClient) {
+          const newBalance = Number(targetClient.credit_balance || 0) + Number(order.total);
+          updatedClient = await ClientRepository.update(client, targetClient.id, { credit_balance: newBalance });
+        }
+      }
+
+      return { order, sale, updatedClient };
+    });
   }
 }

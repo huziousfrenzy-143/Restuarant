@@ -21,8 +21,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ orders, inventory,
       const res = await salesApi.getTodayTotal(orgId);
       return res?.total || 0;
     },
-    enabled: !!orgId,
-    refetchInterval: 30000 // Refetch every 30s to keep Dashboard live
+    enabled: !!orgId
   });
 
 return (

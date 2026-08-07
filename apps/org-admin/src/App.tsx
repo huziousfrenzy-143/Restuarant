@@ -62,11 +62,11 @@ import {
 
 import {
   useTasksQuery,
-  useUsersQuery,
   useAddTaskMutation,
   useUpdateTaskMutation,
   useDeleteTaskMutation,
   useToggleTaskStatusMutation,
+  useUsersQuery,
   useAddUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation
@@ -77,8 +77,11 @@ import {
   useAddPaymentMethodMutation,
   useUpdatePaymentMethodMutation,
   useDeletePaymentMethodMutation,
+  useSettingsQuery,
   useUpdateSettingsMutation
 } from './features/settings/useSettingsQuery';
+
+import { useAppRealtime } from './hooks/useAppRealtime';
 
 import {
   useLedgerAccountsQuery,
@@ -115,6 +118,9 @@ function MainApp() {
 
   const orgId = org?.id || 'org-1';
   const canViewAdminData = currentUser?.role === 'admin' || currentUser?.role === 'owner';
+
+  // Global Realtime Connection (Unified SSE)
+  useAppRealtime(orgId);
 
   // TanStack Query Server States & Mutations per Feature
   const { data: clients = [], refetch: refetchClients } = useClientsQuery(orgId);

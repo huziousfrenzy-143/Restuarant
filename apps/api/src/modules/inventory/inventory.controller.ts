@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryItemInputSchema } from '@restaurant-saas/shared-schemas';
 import { TenantRequest } from '../../middlewares/tenant.middleware';
+import { eventBus } from '../../utils/event-bus';
 
 export class InventoryController {
   static async getItems(req: TenantRequest, res: Response) {
@@ -31,6 +32,12 @@ export class InventoryController {
     }
 
     const item = await InventoryService.createItem(req.tenantDb, parse.data);
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'inventory');
+    }
+
     res.status(201).json({ data: item, message: `Raw ingredient stock '${item.name}' registered` });
   }
 
@@ -43,6 +50,12 @@ export class InventoryController {
     if (!updated) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Inventory item not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'inventory');
+    }
+
     res.json({ data: updated, message: `Stock item '${updated.name}' updated successfully` });
   }
 
@@ -55,6 +68,12 @@ export class InventoryController {
     if (!success) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Inventory item not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'inventory');
+    }
+
     res.json({ message: 'Stock item deleted successfully' });
   }
 

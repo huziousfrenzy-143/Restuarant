@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { OrderService } from './order.service';
 import { CreateOrderInputSchema, UpdateOrderInputSchema } from '@restaurant-saas/shared-schemas';
 import { TenantRequest } from '../../middlewares/tenant.middleware';
+import { eventBus } from '../../utils/event-bus';
 
 export class OrderController {
   static async getOrders(req: TenantRequest, res: Response) {
@@ -25,6 +26,11 @@ export class OrderController {
     const createdBy = req.user?.name || 'Cashier';
     const order = await OrderService.createOrder(req.tenantDb, parse.data, createdBy);
 
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'orders');
+    }
+
     res.status(201).json({ data: order, message: `Order ${order.order_number} created` });
   }
 
@@ -43,6 +49,12 @@ export class OrderController {
       if (!order) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Order not found' } });
       }
+
+      const orgId = req.params.orgId || req.user?.org_id;
+      if (orgId) {
+        eventBus.emitOrgEvent(orgId, 'orders');
+      }
+
       res.json({ data: order, message: `Order ${order.order_number} items updated successfully` });
     } catch (err: any) {
       res.status(400).json({ error: { code: 'ORDER_MODIFICATION_LOCKED', message: err.message } });
@@ -64,6 +76,37 @@ export class OrderController {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Order not found' } });
     }
 
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'orders');
+    }
+
     res.json({ data: order, message: `Order ${order.order_number} status updated to ${status}` });
+  }
+  static async checkout(req: TenantRequest, res: Response) {
+    const parse = CreateOrderInputSchema.safeParse(req.body);
+    if (!parse.success) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid checkout payload', details: parse.error.format() } });
+    }
+
+    if (!req.tenantDb) {
+      return res.status(500).json({ error: { code: 'TENANT_DB_UNAVAILABLE', message: 'Tenant database connection not initialized' } });
+    }
+
+    const createdBy = req.user?.id || 'sys';
+    const cashierName = req.user?.name || 'Cashier';
+    const result = await OrderService.checkout(req.tenantDb, req.body, createdBy, cashierName);
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'orders');
+      eventBus.emitOrgEvent(orgId, 'sales');
+      eventBus.emitOrgEvent(orgId, 'inventory');
+      if (req.body.client_id) {
+        eventBus.emitOrgEvent(orgId, 'clients');
+      }
+    }
+
+    res.status(201).json({ data: result, message: `Checkout successful for Order ${result.order.order_number}` });
   }
 }

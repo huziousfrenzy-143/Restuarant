@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { CreateClientInputSchema, Client } from '@restaurant-saas/shared-schemas';
 import { TenantRequest } from '../../middlewares/tenant.middleware';
 import { TenantDbHelper } from '../../db/tenant-connection';
+import { eventBus } from '../../utils/event-bus';
 
 export class ClientRepository {
   static async findAll(client: PoolClient): Promise<Client[]> {
@@ -84,6 +85,12 @@ export class ClientController {
     }
 
     const client = await ClientService.createClient(req.tenantDb, parse.data);
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'clients');
+    }
+
     res.status(201).json({ data: client, message: `Customer '${client.name}' registered` });
   }
 
@@ -96,6 +103,12 @@ export class ClientController {
     if (!updated) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Client not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'clients');
+    }
+
     res.json({ data: updated, message: `Customer '${updated.name}' updated successfully` });
   }
 
@@ -146,6 +159,13 @@ export class ClientController {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Client not found' } });
     }
 
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'clients');
+      eventBus.emitOrgEvent(orgId, 'orders');
+      eventBus.emitOrgEvent(orgId, 'sales');
+    }
+
     res.json({ data: result, message: `Payment recorded and added to Revenue. Remaining due balance: $${result.credit_balance}` });
   }
 
@@ -158,6 +178,12 @@ export class ClientController {
     if (!success) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Client not found' } });
     }
+
+    const orgId = req.params.orgId || req.user?.org_id;
+    if (orgId) {
+      eventBus.emitOrgEvent(orgId, 'clients');
+    }
+
     res.json({ message: 'Customer profile deleted successfully' });
   }
 }

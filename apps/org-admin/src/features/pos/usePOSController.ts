@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Product, OrderItem } from '@restaurant-saas/shared-schemas';
 import { useProductsQuery, useCategoriesQuery } from '../products/useProductsQuery';
-import { useClientsQuery, useUpdateClientMutation } from '../clients/useClientsQuery';
-import { useCreateOrderMutation } from '../orders/useOrdersQuery';
-import { useCreateSaleMutation } from '../sales/useSalesQuery';
+import { useClientsQuery } from '../clients/useClientsQuery';
+import { useCheckoutMutation } from '../orders/useOrdersQuery';
 import { useAppStore } from '../../store/useAppStore';
 
 export const usePOSController = () => {
@@ -17,9 +16,7 @@ export const usePOSController = () => {
   const { data: categories = [] } = useCategoriesQuery(orgId);
   const { data: clients = [] } = useClientsQuery(orgId);
 
-  const createOrderMut = useCreateOrderMutation(orgId);
-  const createSaleMut = useCreateSaleMutation(orgId);
-  const updateClientMut = useUpdateClientMutation(orgId);
+  const checkoutMut = useCheckoutMutation(orgId);
 
   // Local POS State
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -123,24 +120,11 @@ export const usePOSController = () => {
       status: 'new'
     };
 
-    await runAction('Processing POS Order...', async () => {
-      const newOrder = await createOrderMut.mutateAsync(newOrderData);
-      if (newOrder) {
-        await createSaleMut.mutateAsync({
-          order_id: newOrder.id,
-          payment_method: paymentMethod,
-          amount_paid: totalPayable,
-          amount_due: 0
-        });
-
-        if (paymentMethod === 'borrow_credit' && newOrderData.client_id) {
-          const targetClient = clients.find(c => c.id === newOrderData.client_id);
-          if (targetClient) {
-            const updatedBalance = Number(targetClient.credit_balance || 0) + Number(totalPayable);
-            await updateClientMut.mutateAsync({ id: targetClient.id, updates: { credit_balance: updatedBalance } });
-          }
-        }
-      }
+    await runAction('Processing POS Checkout...', async () => {
+      await checkoutMut.mutateAsync({
+        ...newOrderData,
+        payment_method: paymentMethod
+      });
     });
 
     // Save for print receipt popup
