@@ -35,6 +35,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         throw new Error(json.error?.message || 'Login failed');
       }
 
+      if (json.data?.directLogin) {
+        const accessToken = json.data.accessToken || 'demo-access-token';
+        const refreshToken = json.data.refreshToken || 'demo-refresh-token';
+        saveAuthToken(accessToken, refreshToken, json.data.user);
+        onLoginSuccess(json.data.user, accessToken, refreshToken);
+        return;
+      }
+
       setSuccessMsg(`Security OTP verification code emailed to ${email}! Check your inbox.`);
       setStep('verify_otp');
     } catch (err: any) {
@@ -140,7 +148,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               disabled={isLoading}
               className="w-full py-3 rounded-md bg-primary hover:bg-primary-hover text-white font-bold text-xs tracking-wider uppercase shadow flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50 font-mono"
             >
-              {isLoading ? 'Sending Security OTP Email...' : 'Send Login OTP Code'}
+              {isLoading ? 'Logging In...' : 'Login'}
               <Sparkles className="w-4 h-4" />
             </button>
           </form>

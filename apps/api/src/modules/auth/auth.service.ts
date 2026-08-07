@@ -214,6 +214,18 @@ export class AuthService {
       }
     }
 
+    if (user.role !== 'admin' && user.role !== 'owner') {
+      const loginResult = await this.loginStaff(email);
+      if (loginResult.error) {
+         return { success: false, message: loginResult.error };
+      }
+      return {
+        success: true,
+        directLogin: true,
+        ...loginResult
+      };
+    }
+
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 

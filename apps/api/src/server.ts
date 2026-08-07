@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 
 import authRoutes from './modules/auth/auth.routes';
 import organizationRoutes from './modules/organizations/organization.routes';
@@ -18,7 +19,7 @@ import userRoutes from './modules/users/user.routes';
 import paymentMethodRoutes from './modules/payment-methods/payment-method.routes';
 import uploadRoutes from './modules/upload/upload.routes';
 
-import { authMiddleware } from './middlewares/auth.middleware';
+import { authMiddleware, requireRole } from './middlewares/auth.middleware';
 import { tenantMiddleware, subscriptionMiddleware } from './middlewares/tenant.middleware';
 import { initPgDatabase } from './db/pg.client';
 
@@ -56,6 +57,7 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(compression());
 
 // Support base64 image uploads up to 10MB
 app.use(express.json({ limit: '10mb' }));
@@ -96,17 +98,17 @@ app.use('/api/v1', uploadRoutes);
 // ----------------------------------------------------
 // TENANT ROUTED FEATURE MODULES (Pattern: /api/v1/:orgId/<feature>)
 // ----------------------------------------------------
-app.use('/api/v1/:orgId/settings', authMiddleware, tenantMiddleware, subscriptionMiddleware, tenantSettingsRoutes);
-app.use('/api/v1/:orgId/users', authMiddleware, tenantMiddleware, subscriptionMiddleware, userRoutes);
+app.use('/api/v1/:orgId/settings', authMiddleware, tenantMiddleware, subscriptionMiddleware, requireRole('admin', 'owner'), tenantSettingsRoutes);
+app.use('/api/v1/:orgId/users', authMiddleware, tenantMiddleware, subscriptionMiddleware, requireRole('admin', 'owner'), userRoutes);
 app.use('/api/v1/:orgId', authMiddleware, tenantMiddleware, subscriptionMiddleware, productRoutes);
 app.use('/api/v1/:orgId/inventory', authMiddleware, tenantMiddleware, subscriptionMiddleware, inventoryRoutes);
 app.use('/api/v1/:orgId/orders', authMiddleware, tenantMiddleware, subscriptionMiddleware, orderRoutes);
 app.use('/api/v1/:orgId/sales', authMiddleware, tenantMiddleware, subscriptionMiddleware, saleRoutes);
 app.use('/api/v1/:orgId/payment-methods', authMiddleware, tenantMiddleware, subscriptionMiddleware, paymentMethodRoutes);
-app.use('/api/v1/:orgId/ledger', authMiddleware, tenantMiddleware, subscriptionMiddleware, ledgerRoutes);
+app.use('/api/v1/:orgId/ledger', authMiddleware, tenantMiddleware, subscriptionMiddleware, requireRole('admin', 'owner'), ledgerRoutes);
 app.use('/api/v1/:orgId/clients', authMiddleware, tenantMiddleware, subscriptionMiddleware, clientRoutes);
 app.use('/api/v1/:orgId/tasks', authMiddleware, tenantMiddleware, subscriptionMiddleware, taskRoutes);
-app.use('/api/v1/:orgId/audit-log', authMiddleware, tenantMiddleware, subscriptionMiddleware, auditLogRoutes);
+app.use('/api/v1/:orgId/audit-log', authMiddleware, tenantMiddleware, subscriptionMiddleware, requireRole('admin', 'owner'), auditLogRoutes);
 
 // Lazy database initialization middleware for Vercel serverless cold-starts
 let isDbInitStarted = false;

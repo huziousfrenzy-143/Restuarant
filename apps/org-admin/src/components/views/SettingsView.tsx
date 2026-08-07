@@ -106,6 +106,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const canManageOrg = currentUser?.role === 'admin' || currentUser?.role === 'owner';
+
   return (
     <div className="p-6 space-y-6 flex-1 overflow-y-auto font-sans">
       <div className="flex items-center justify-between">
@@ -262,6 +264,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Card 2: Organization Profile & Tax Rate Editor */}
+        {canManageOrg && (
         <div className="p-5 rounded-md border border-mist bg-surface space-y-4 shadow-sm">
           <h3 className="font-bold text-sm text-ink flex items-center justify-between border-b border-mist pb-3 font-mono">
             <span className="flex items-center gap-2">
@@ -331,6 +334,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </form>
         </div>
+        )}
       </div>
 
       {/* Deletion Confirm Modal */}

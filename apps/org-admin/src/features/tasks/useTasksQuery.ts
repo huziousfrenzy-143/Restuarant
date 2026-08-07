@@ -13,11 +13,11 @@ export function useTasksQuery(orgId: string) {
   });
 }
 
-export function useUsersQuery(orgId: string) {
+export function useUsersQuery(orgId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: USERS_QUERY_KEY(orgId),
     queryFn: () => usersApi.getAll(orgId),
-    enabled: Boolean(orgId)
+    enabled: Boolean(orgId) && (options?.enabled ?? true)
   });
 }
 

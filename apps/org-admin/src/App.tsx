@@ -4,19 +4,19 @@ import { Sidebar } from './components/layout/Sidebar';
 import { LoginView } from './components/views/LoginView';
 import { useAppStore } from './store/useAppStore';
 
-import { OwnerOverview } from './components/views/OwnerOverview';
-import { POSView } from './components/views/POSView';
-import { KDSView } from './components/views/KDSView';
-import { OrdersView } from './components/views/OrdersView';
-import { InventoryView } from './components/views/InventoryView';
-import { SalesView } from './components/views/SalesView';
-import { LedgerView } from './components/views/LedgerView';
-import { ProductsView } from './components/views/ProductsView';
+const OwnerOverview = React.lazy(() => import('./components/views/OwnerOverview').then(m => ({ default: m.OwnerOverview })));
+const POSView = React.lazy(() => import('./components/views/POSView').then(m => ({ default: m.POSView })));
+const KDSView = React.lazy(() => import('./components/views/KDSView').then(m => ({ default: m.KDSView })));
+const OrdersView = React.lazy(() => import('./components/views/OrdersView').then(m => ({ default: m.OrdersView })));
+const InventoryView = React.lazy(() => import('./components/views/InventoryView').then(m => ({ default: m.InventoryView })));
+const SalesView = React.lazy(() => import('./components/views/SalesView').then(m => ({ default: m.SalesView })));
+const LedgerView = React.lazy(() => import('./components/views/LedgerView').then(m => ({ default: m.LedgerView })));
+const ProductsView = React.lazy(() => import('./components/views/ProductsView').then(m => ({ default: m.ProductsView })));
 import { FormErrorAlert } from './components/common/FormErrorAlert';
-import { ClientsView } from './features/clients/ClientsView';
-import { TasksView } from './components/views/TasksView';
-import { ReportsView } from './components/views/ReportsView';
-import { SettingsView } from './components/views/SettingsView';
+const ClientsView = React.lazy(() => import('./features/clients/ClientsView').then(m => ({ default: m.ClientsView })));
+const TasksView = React.lazy(() => import('./components/views/TasksView').then(m => ({ default: m.TasksView })));
+const ReportsView = React.lazy(() => import('./components/views/ReportsView').then(m => ({ default: m.ReportsView })));
+const SettingsView = React.lazy(() => import('./components/views/SettingsView').then(m => ({ default: m.SettingsView })));
 
 import { Loader2 } from 'lucide-react';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
@@ -89,7 +89,7 @@ import {
   useAddEntryMutation
 } from './features/ledger/useLedgerQuery';
 
-export function App() {
+function MainApp() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
 
@@ -114,6 +114,7 @@ export function App() {
   } = useAppStore();
 
   const orgId = org?.id || 'org-1';
+  const canViewAdminData = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
   // TanStack Query Server States & Mutations per Feature
   const { data: clients = [], refetch: refetchClients } = useClientsQuery(orgId);
@@ -122,11 +123,11 @@ export function App() {
   const { data: inventory = [] } = useInventoryQuery(orgId);
   const { data: orders = [] } = useOrdersQuery(orgId);
   const { data: sales = [], refetch: refetchSales } = useSalesQuery(orgId);
-  const { data: users = [] } = useUsersQuery(orgId);
+  const { data: users = [] } = useUsersQuery(orgId, { enabled: canViewAdminData });
   const { data: tasks = [] } = useTasksQuery(orgId);
   const { data: paymentMethods = [] } = usePaymentMethodsQuery(orgId);
-  const { data: accounts = [] } = useLedgerAccountsQuery(orgId);
-  const { data: entries = [] } = useLedgerEntriesQuery(orgId);
+  const { data: accounts = [] } = useLedgerAccountsQuery(orgId, { enabled: canViewAdminData });
+  const { data: entries = [] } = useLedgerEntriesQuery(orgId, { enabled: canViewAdminData });
 
   // TanStack Mutations
   const addClientMut = useAddClientMutation(orgId);
@@ -169,31 +170,6 @@ export function App() {
   const deleteAccountMut = useDeleteAccountMutation(orgId);
   const addEntryMut = useAddEntryMutation(orgId);
 
-  const handleLoginSuccess = (user: any) => {
-    setCurrentUser(user);
-    if (user.org) setOrg(user.org);
-    if (user.userOrgs && Array.isArray(user.userOrgs)) {
-      setUserOrgs(user.userOrgs);
-    } else if (user.org) {
-      setUserOrgs([user.org]);
-    }
-
-    if (user.role === 'salesman') {
-      setActiveTab('pos');
-      setIsLineMode(false);
-    } else if (user.role === 'chef') {
-      setActiveTab('kds');
-      setIsLineMode(true);
-    } else if (user.role === 'delivery_boy') {
-      setActiveTab('orders');
-      setIsLineMode(false);
-    } else {
-      setActiveTab('dashboard');
-      setIsLineMode(false);
-    }
-
-    setIsAuthenticated(true);
-  };
 
   const handleSwitchOrg = async (targetOrgId: string) => {
     await runAction('Switching Organization...', async () => {
@@ -265,9 +241,6 @@ export function App() {
     });
   };
 
-  if (!isAuthenticated) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
-  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -478,8 +451,14 @@ export function App() {
           </div>
         )}
 
-        <main className="flex-1 p-3 sm:p-6 overflow-y-auto pb-24 md:pb-6">
-          {renderContent()}
+        <main className="flex-1 p-3 sm:p-6 overflow-y-auto pb-24 md:pb-6 relative">
+          <React.Suspense fallback={
+            <div className="absolute inset-0 flex items-center justify-center bg-steel/50 backdrop-blur-sm z-50">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+          }>
+            {renderContent()}
+          </React.Suspense>
         </main>
       </div>
 
@@ -493,4 +472,40 @@ export function App() {
       />
     </div>
   );
+}
+
+export function App() {
+  const { isAuthenticated, setCurrentUser, setOrg, setUserOrgs, setActiveTab, setIsLineMode, setIsAuthenticated } = useAppStore();
+
+  const handleLoginSuccess = (user: any) => {
+    setCurrentUser(user);
+    if (user.org) setOrg(user.org);
+    if (user.userOrgs && Array.isArray(user.userOrgs)) {
+      setUserOrgs(user.userOrgs);
+    } else if (user.org) {
+      setUserOrgs([user.org]);
+    }
+
+    if (user.role === 'salesman') {
+      setActiveTab('pos');
+      setIsLineMode(false);
+    } else if (user.role === 'chef') {
+      setActiveTab('kds');
+      setIsLineMode(true);
+    } else if (user.role === 'delivery_boy') {
+      setActiveTab('orders');
+      setIsLineMode(false);
+    } else {
+      setActiveTab('dashboard');
+      setIsLineMode(false);
+    }
+
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  return <MainApp />;
 }

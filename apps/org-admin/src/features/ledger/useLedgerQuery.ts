@@ -4,19 +4,19 @@ import { ledgerApi } from '../../api/ledger.api';
 export const LEDGER_ACCOUNTS_QUERY_KEY = (orgId: string) => ['ledger-accounts', orgId];
 export const LEDGER_ENTRIES_QUERY_KEY = (orgId: string) => ['ledger-entries', orgId];
 
-export function useLedgerAccountsQuery(orgId: string) {
+export function useLedgerAccountsQuery(orgId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: LEDGER_ACCOUNTS_QUERY_KEY(orgId),
     queryFn: () => ledgerApi.getAccounts(orgId),
-    enabled: Boolean(orgId)
+    enabled: Boolean(orgId) && (options?.enabled ?? true)
   });
 }
 
-export function useLedgerEntriesQuery(orgId: string) {
+export function useLedgerEntriesQuery(orgId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: LEDGER_ENTRIES_QUERY_KEY(orgId),
     queryFn: () => ledgerApi.getEntries(orgId),
-    enabled: Boolean(orgId)
+    enabled: Boolean(orgId) && (options?.enabled ?? true)
   });
 }
 

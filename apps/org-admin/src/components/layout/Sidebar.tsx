@@ -37,13 +37,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'pos', label: 'POS Terminal', icon: ShoppingCart, roles: ['owner', 'admin', 'salesman'] },
     { id: 'kds', label: 'Kitchen KDS', icon: Flame, badge: 'Line', roles: ['owner', 'admin', 'chef'] },
     { id: 'orders', label: 'Orders Rail', icon: ClipboardList, roles: ['owner', 'admin', 'salesman', 'delivery_boy'] },
-    { id: 'products', label: 'Products & Recipes', icon: UtensilsCrossed, roles: ['owner', 'admin'] },
+    { id: 'products', label: 'Products & Recipes', icon: UtensilsCrossed, roles: ['owner', 'admin', 'salesman'] },
     { id: 'inventory', label: 'Inventory Stock', icon: Boxes, roles: ['owner', 'admin'] },
     { id: 'sales', label: 'Sales Operations', icon: TrendingUp, roles: ['owner', 'admin'] },
     { id: 'clients', label: 'Clients CRM', icon: Users, roles: ['owner', 'admin'] },
     { id: 'tasks', label: 'Tasks & Employees', icon: CheckSquare, roles: ['owner', 'admin'] },
     { id: 'reports', label: 'Reports', icon: BarChart3, roles: ['owner', 'admin'] },
-    { id: 'settings', label: 'Settings', icon: Settings, roles: ['owner', 'admin'] }
+    { id: 'settings', label: 'Settings', icon: Settings, roles: ['owner', 'admin', 'salesman', 'chef', 'delivery_boy'] }
   ];
 
   // Filter navigation items by role
