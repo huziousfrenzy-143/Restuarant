@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 10,
     flexDirection: 'row',
-    justify: 'center',
+    justifyContent: 'center',
     alignItems: 'center'
   },
   actionBtnText: {

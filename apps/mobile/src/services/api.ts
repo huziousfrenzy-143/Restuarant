@@ -151,6 +151,14 @@ export async function createOrderApi(orgId: string, orderPayload: any): Promise<
   });
 }
 
+// 7b. Checkout Order (POST /api/v1/:orgId/orders/checkout)
+export async function checkoutApi(orgId: string, checkoutPayload: any): Promise<{ order: Order; sale: any }> {
+  return await fetchMobileJson<{ order: Order; sale: any }>(`/${orgId}/orders/checkout`, {
+    method: 'POST',
+    body: JSON.stringify(checkoutPayload)
+  });
+}
+
 // 8. Update Order Status (PATCH /api/v1/:orgId/orders/:id/status)
 export async function updateOrderStatusApi(orgId: string, orderId: string, status: OrderStatus): Promise<Order> {
   return await fetchMobileJson<Order>(`/${orgId}/orders/${orderId}/status`, {
@@ -198,5 +206,28 @@ export async function deleteClientApi(orgId: string, clientId: string): Promise<
   return await fetchMobileJson<{ message: string }>(`/${orgId}/clients/${clientId}`, {
     method: 'DELETE'
   });
+}
+
+// 15. Fetch Tasks
+export async function fetchTasksApi(orgId: string): Promise<any[]> {
+  return await fetchMobileJson<any[]>(`/${orgId}/tasks`);
+}
+
+// 16. Update Task Status
+export async function updateTaskStatusApi(orgId: string, taskId: string, status: string): Promise<any> {
+  return await fetchMobileJson<any>(`/${orgId}/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  });
+}
+
+// 17. Fetch Ledger Accounts
+export async function fetchLedgerAccountsApi(orgId: string): Promise<any[]> {
+  return await fetchMobileJson<any[]>(`/${orgId}/ledger/accounts`);
+}
+
+// 18. Fetch Ledger Entries
+export async function fetchLedgerEntriesApi(orgId: string): Promise<any[]> {
+  return await fetchMobileJson<any[]>(`/${orgId}/ledger/entries`);
 }
 

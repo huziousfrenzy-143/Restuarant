@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal,
 import { Client } from '@restaurant-saas/shared-schemas';
 import { LightColors, LineModeColors } from '../theme/colors';
 import { Users, Search, Plus, Phone, MapPin, FileText, Download, CreditCard, X, Edit2, Trash2, DollarSign } from 'lucide-react-native';
+import { exportToExcel } from '../utils/exportUtils';
 
 interface ClientsScreenProps {
   clients: Client[];
@@ -145,11 +146,13 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
   };
 
   const handleExportClientsCSV = () => {
-    const rows = clients.map(c => `${c.name},${c.phone},"${c.address || ''}",${toNum(c.credit_balance).toFixed(2)}`).join('\n');
-    Alert.alert(
-      'Customers CSV Export Ready',
-      `Exported ${clients.length} customer records to CSV.\n\nSummary:\nRegistered: ${clients.length} Customers`
-    );
+    const data = clients.map(c => ({
+      'Name': c.name,
+      'Phone': c.phone,
+      'Address': c.address || '',
+      'Outstanding Debt ($)': toNum(c.credit_balance)
+    }));
+    exportToExcel(data, `Customers_Export_${Date.now()}`, 'Customers');
   };
 
   return (

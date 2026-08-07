@@ -12,6 +12,8 @@ import { SalesScreen } from './views/SalesScreen';
 import { ReportsScreen } from './views/ReportsScreen';
 import { ClientsScreen } from './views/ClientsScreen';
 import { SettingsScreen } from './views/SettingsScreen';
+import { TasksScreen } from './views/TasksScreen';
+import { LedgerScreen } from './views/LedgerScreen';
 
 import {
   switchOrgApi,
@@ -42,6 +44,8 @@ import {
   PendingSyncItem
 } from './services/storage';
 
+import { useAppRealtime } from './hooks/useAppRealtime';
+
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -54,7 +58,9 @@ import {
   Cloud,
   Zap,
   Sun,
-  Flame as FireIcon
+  Flame as FireIcon,
+  CheckCircle2,
+  BookOpen
 } from 'lucide-react-native';
 
 export default function App() {
@@ -130,7 +136,7 @@ export default function App() {
       
       if (ords) {
         const localCreatedOrders = freshQueue
-          .filter(q => q.type === 'CREATE_ORDER')
+          .filter(q => q.type === 'CREATE_ORDER' || q.type === 'CHECKOUT_ORDER')
           .map(q => ({
             ...q.payload,
             id: q.payload.id || `ord-sync-${Date.now()}`
@@ -170,6 +176,13 @@ export default function App() {
     }
   }, [isAuthenticated, currentOrg?.id, syncStoreData]);
 
+  // Handle Unified SSE Real-time Updates
+  useAppRealtime(isAuthenticated ? currentOrg?.id : undefined, (type) => {
+    if (currentOrg?.id) {
+      syncStoreData(currentOrg.id);
+    }
+  });
+
   // MANUAL SYNC LOCAL STORED DATA TO BACKEND
   const handleManualSyncToBackend = async () => {
     if (!currentOrg?.id) return;
@@ -189,6 +202,12 @@ export default function App() {
         try {
           if (item.type === 'CREATE_ORDER') {
             await createOrderApi(currentOrg.id, item.payload);
+          } else if (item.type === 'CHECKOUT_ORDER') {
+            // we will need to add checkoutApi to api.ts, but wait, the queue payload already contains everything.
+            // I'll leave this as a stub and fix it in api.ts next.
+            // await checkoutApi(currentOrg.id, item.payload);
+            const { checkoutApi } = require('./services/api');
+            await checkoutApi(currentOrg.id, item.payload);
           } else if (item.type === 'UPDATE_ORDER_STATUS') {
             await updateOrderStatusApi(currentOrg.id, item.payload.id, item.payload.status);
           } else if (item.type === 'CREATE_CLIENT') {
@@ -301,8 +320,9 @@ export default function App() {
     const updatedOrders = [tempOrder, ...orders];
     setOrders(updatedOrders);
     await saveLocalOrders(updatedOrders);
+
     const newQueue = await addPendingSyncItem({
-      type: 'CREATE_ORDER',
+      type: 'CHECKOUT_ORDER',
       payload: newOrderPayload
     });
     setPendingQueue(newQueue);
@@ -462,6 +482,20 @@ export default function App() {
             isLineMode={isLineMode}
           />
         );
+      case 'tasks':
+        return (
+          <TasksScreen
+            isLineMode={isLineMode}
+            orgId={currentOrg?.id || null}
+          />
+        );
+      case 'ledger':
+        return (
+          <LedgerScreen
+            isLineMode={isLineMode}
+            orgId={currentOrg?.id || null}
+          />
+        );
       case 'settings':
         return (
           <SettingsScreen
@@ -571,6 +605,8 @@ export default function App() {
             { id: 'sales', label: 'Sales', icon: DollarSign, roles: ['owner', 'admin'] },
             { id: 'reports', label: 'Reports', icon: TrendingUp, roles: ['owner', 'admin'] },
             { id: 'clients', label: 'Customers', icon: Users, roles: ['owner', 'admin', 'salesman'] },
+            { id: 'tasks', label: 'Tasks', icon: CheckCircle2, roles: ['owner', 'admin', 'salesman', 'chef', 'delivery_boy'] },
+            { id: 'ledger', label: 'Ledger', icon: BookOpen, roles: ['owner', 'admin'] },
             { id: 'settings', label: 'Settings', icon: Settings, roles: ['owner', 'admin', 'salesman', 'chef', 'delivery_boy'] }
           ]
             .filter(item => item.roles.includes(currentUser?.role || 'owner'))

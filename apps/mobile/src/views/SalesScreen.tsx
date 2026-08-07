@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Order } from '@restaurant-saas/shared-schemas';
 import { LightColors, LineModeColors } from '../theme/colors';
+import { Download } from 'lucide-react-native';
+import { exportToExcel } from '../utils/exportUtils';
 
 interface SalesScreenProps {
   orders: Order[];
@@ -37,11 +39,33 @@ export const SalesScreen: React.FC<SalesScreenProps> = ({ orders, isLineMode }) 
     <ScrollView style={[styles.container, { backgroundColor: colors.steel }]} contentContainerStyle={styles.content}>
       {/* Header Banner */}
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.mist }]}>
-        <Text style={[styles.sectionTitle, { color: colors.graphite }]}>SALES & REVENUE TRACKER</Text>
-        <Text style={[styles.totalRevenueText, { color: colors.ink }]}>${toNum(totalSalesRevenue).toFixed(2)}</Text>
-        <Text style={[styles.subText, { color: colors.graphite }]}>
-          {filteredSales.length} Total Processed Sales Transactions
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View>
+            <Text style={[styles.sectionTitle, { color: colors.graphite }]}>SALES & REVENUE TRACKER</Text>
+            <Text style={[styles.totalRevenueText, { color: colors.ink }]}>${toNum(totalSalesRevenue).toFixed(2)}</Text>
+            <Text style={[styles.subText, { color: colors.graphite }]}>
+              {filteredSales.length} Total Processed Sales Transactions
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.exportBtn, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              const data = filteredSales.map(o => ({
+                'Order ID': o.order_number,
+                'Type': o.type,
+                'Status': o.status,
+                'Total': toNum(o.total),
+                'Tax': toNum(o.tax),
+                'Discount': toNum(o.discount),
+                'Date': new Date(o.created_at).toLocaleString()
+              }));
+              exportToExcel(data, `Sales_Export_${Date.now()}`, 'Sales');
+            }}
+          >
+            <Download size={16} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>Export</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Quick KPI Bar */}
         <View style={styles.kpiGrid}>
@@ -159,5 +183,12 @@ const styles = StyleSheet.create({
   saleItemsSummary: { fontSize: 11, marginTop: 4 },
   saleRowRight: { alignItems: 'flex-end' },
   saleTotal: { fontSize: 16, fontWeight: 'bold' },
-  saleDate: { fontSize: 10, fontFamily: 'monospace', marginTop: 2 }
+  saleDate: { fontSize: 10, fontFamily: 'monospace', marginTop: 2 },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8
+  }
 });
