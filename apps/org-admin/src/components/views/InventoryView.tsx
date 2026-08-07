@@ -3,6 +3,7 @@ import { InventoryItem, InventoryMovement, Product } from '@restaurant-saas/shar
 import { formatCurrency, getInventoryStatusMeta } from '@restaurant-saas/ui';
 import { Boxes, Plus, ArrowDownRight, ArrowUpRight, AlertTriangle, ShieldCheck, RefreshCw, X, PackagePlus, Edit2, Trash2 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { FormErrorAlert } from '../common/FormErrorAlert';
 
 interface InventoryViewProps {
   inventory: InventoryItem[];
@@ -41,6 +42,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [currentQty, setCurrentQty] = useState<number>(20);
   const [reorderLevel, setReorderLevel] = useState<number>(5);
   const [unitCost, setUnitCost] = useState<number>(5.50);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleMovementSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,10 +54,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
   const handleNewItemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemName) return;
+    setFormError(null);
+    if (!itemName || itemName.trim().length < 2) {
+      setFormError("Ingredient name must be at least 2 characters.");
+      return;
+    }
 
     const payload = {
-      name: itemName,
+      name: itemName.trim(),
       unit,
       current_qty: Number(currentQty),
       reorder_level: Number(reorderLevel),
@@ -80,6 +86,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     setCurrentQty(Number(item.current_qty));
     setReorderLevel(Number(item.reorder_level));
     setUnitCost(Number(item.unit_cost));
+    setFormError(null);
     setIsNewItemModalOpen(true);
   };
 
@@ -101,7 +108,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
         <div className="flex gap-2">
           <button
-            onClick={() => { setEditingItem(null); setItemName(''); setIsNewItemModalOpen(true); }}
+            onClick={() => { setEditingItem(null); setItemName(''); setFormError(null); setIsNewItemModalOpen(true); }}
             className="px-3.5 py-2 rounded-md bg-steel border border-mist text-ink text-xs font-bold hover:bg-mist/60 transition-all font-mono flex items-center gap-1.5"
           >
             <PackagePlus className="w-4 h-4 text-graphite" />
@@ -185,6 +192,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {formError && (
+              <FormErrorAlert message={formError} onDismiss={() => setFormError(null)} className="mb-2" />
+            )}
 
             <div className="space-y-3 text-xs font-mono">
               <div>

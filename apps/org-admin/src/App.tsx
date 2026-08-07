@@ -12,6 +12,7 @@ import { InventoryView } from './components/views/InventoryView';
 import { SalesView } from './components/views/SalesView';
 import { LedgerView } from './components/views/LedgerView';
 import { ProductsView } from './components/views/ProductsView';
+import { FormErrorAlert } from './components/common/FormErrorAlert';
 import { ClientsView } from './features/clients/ClientsView';
 import { TasksView } from './components/views/TasksView';
 import { ReportsView } from './components/views/ReportsView';
@@ -90,6 +91,7 @@ import {
 
 export function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [appError, setAppError] = useState<string | null>(null);
 
   // Zustand Store Selectors for Local Session State
   const {
@@ -206,7 +208,7 @@ export function App() {
       });
       const json = await res.json();
       if (!res.ok) {
-        alert(json.error?.message || 'Failed to switch organization context');
+        setAppError(json.error?.message || 'Failed to switch organization context');
         return;
       }
 
@@ -469,6 +471,12 @@ export function App() {
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onLogout={logout}
         />
+
+        {appError && (
+          <div className="px-3 sm:px-6 pt-4 pb-0 z-10">
+            <FormErrorAlert message={appError} onDismiss={() => setAppError(null)} />
+          </div>
+        )}
 
         <main className="flex-1 p-3 sm:p-6 overflow-y-auto pb-24 md:pb-6">
           {renderContent()}

@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Product, ProductCategory, InventoryItem } from '@restaurant-saas/shared-schemas';
 import { formatCurrency } from '@restaurant-saas/ui';
 import { UtensilsCrossed, Plus, FolderPlus, Edit2, Trash2, Search, Tag, X, Image as ImageIcon, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { Pagination } from '../common/Pagination';
+import { FormErrorAlert } from '../common/FormErrorAlert';
 import { API_BASE_URL } from '../../config/api';
 
 interface ProductsViewProps {
@@ -53,8 +54,22 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [sku, setSku] = useState('');
   const [imageUrl, setImageUrl] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
-  const [recipeItemId, setRecipeItemId] = useState(inventory[0]?.id || '');
-  const [recipeQty, setRecipeQty] = useState<number>(0.25);
+  const [recipeItems, setRecipeItems] = useState<{ id: string; qty: number }[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Auto-calculate cost price when recipe items change
+  useEffect(() => {
+    if (recipeItems.length > 0) {
+      const calculatedCost = recipeItems.reduce((acc, ri) => {
+        const invItem = inventory.find(i => i.id === ri.id);
+        if (invItem) {
+          return acc + (Number(invItem.unit_cost) * ri.qty);
+        }
+        return acc;
+      }, 0);
+      setCostPrice(Number(calculatedCost.toFixed(2)));
+    }
+  }, [recipeItems, inventory]);
 
   // Category Form State
   const [categoryName, setCategoryName] = useState('');
@@ -101,11 +116,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         const json = await res.json();
         if (res.ok && json.data?.url) {
           setImageUrl(json.data.url);
+          setFormError(null);
         } else {
-          alert(json.error?.message || 'Failed to upload image to Cloudinary');
+          setFormError(json.error?.message || 'Failed to upload image to Cloudinary');
         }
       } catch (err: any) {
-        alert('Cloudinary Upload Error: ' + err.message);
+        setFormError('Cloudinary Upload Error: ' + err.message);
       } finally {
         setIsUploadingImage(false);
       }
@@ -118,11 +134,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     if (!name || !sku || !categoryId) return;
 
     const selectedCategoryObj = categories.find(c => c.id === categoryId);
-    const selectedInv = inventory.find(i => i.id === recipeItemId);
 
-    const recipe = selectedInv
-      ? [{ inventory_item_id: selectedInv.id, inventory_item_name: selectedInv.name, qty_required: recipeQty, unit: selectedInv.unit }]
-      : [];
+    const recipe = recipeItems.map(ri => {
+      const inv = inventory.find(i => i.id === ri.id);
+      if (!inv) return null;
+      return { inventory_item_id: inv.id, inventory_item_name: inv.name, qty_required: ri.qty, unit: inv.unit };
+    }).filter(Boolean);
 
     const payload = {
       category_id: categoryId,
@@ -146,6 +163,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     setName('');
     setSku('');
     setImageUrl('');
+    setRecipeItems([]);
+    setFormError(null);
     setIsProductModalOpen(false);
   };
 
@@ -157,10 +176,12 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     setCostPrice(Number(prod.cost_price));
     setSku(prod.sku);
     setImageUrl(prod.image_url || '');
-    if (prod.recipe && prod.recipe[0]) {
-      setRecipeItemId(prod.recipe[0].inventory_item_id);
-      setRecipeQty(Number(prod.recipe[0].qty_required));
+    if (prod.recipe && prod.recipe.length > 0) {
+      setRecipeItems(prod.recipe.map(r => ({ id: r.inventory_item_id, qty: Number(r.qty_required) })));
+    } else {
+      setRecipeItems([]);
     }
+    setFormError(null);
     setIsProductModalOpen(true);
   };
 
@@ -213,7 +234,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <span>Add Category</span>
           </button>
           <button
-            onClick={() => { setEditingProduct(null); setName(''); setSku(''); setImageUrl(''); setIsProductModalOpen(true); }}
+            onClick={() => { setEditingProduct(null); setName(''); setSku(''); setImageUrl(''); setRecipeItems([]); setFormError(null); setIsProductModalOpen(true); }}
             className="px-4 py-2 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-all flex items-center gap-2 shadow-sm font-mono"
           >
             <Plus className="w-4 h-4" />
@@ -374,6 +395,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
               </button>
             </div>
 
+            {formError && <FormErrorAlert message={formError} onDismiss={() => setFormError(null)} className="mb-2" />}
+
             <div className="space-y-3 text-xs font-mono">
               {/* Cloudinary Dish Image Upload Input */}
               <div className="p-3 bg-steel/50 border border-mist rounded space-y-2">
@@ -487,25 +510,46 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
 
               {/* Recipe Stock Link */}
               <div className="p-3 bg-steel/50 border border-mist rounded space-y-2">
-                <label className="text-graphite block font-semibold">Link Raw Stock for Auto-Deduction</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={recipeItemId}
-                    onChange={e => setRecipeItemId(e.target.value)}
-                    className="w-full p-1.5 rounded border border-mist bg-surface text-xs"
-                  >
-                    {inventory.map(i => (
-                      <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="0.05"
-                    value={recipeQty}
-                    onChange={e => setRecipeQty(parseFloat(e.target.value) || 0)}
-                    className="w-full p-1.5 rounded border border-mist bg-surface text-xs font-bold"
-                  />
-                </div>
+                <label className="text-graphite block font-semibold flex justify-between items-center">
+                  <span>Link Raw Stock for Auto-Deduction</span>
+                  <button type="button" onClick={() => setRecipeItems([...recipeItems, { id: inventory[0]?.id || '', qty: 0 }])} className="text-primary hover:text-primary-hover text-[10px] flex items-center gap-1 font-bold"><Plus className="w-3 h-3"/> Add Ingredient</button>
+                </label>
+                {recipeItems.map((ri, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <select
+                      value={ri.id}
+                      onChange={e => {
+                        const newItems = [...recipeItems];
+                        newItems[index].id = e.target.value;
+                        setRecipeItems(newItems);
+                      }}
+                      className="flex-1 p-1.5 rounded border border-mist bg-surface text-xs"
+                    >
+                      {inventory.map(i => (
+                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      step="0.05"
+                      value={ri.qty}
+                      onChange={e => {
+                        const newItems = [...recipeItems];
+                        newItems[index].qty = parseFloat(e.target.value) || 0;
+                        setRecipeItems(newItems);
+                      }}
+                      className="w-24 p-1.5 rounded border border-mist bg-surface text-xs font-bold"
+                      placeholder="Qty"
+                    />
+                    <button type="button" onClick={() => {
+                        const newItems = recipeItems.filter((_, i) => i !== index);
+                        setRecipeItems(newItems);
+                    }} className="text-graphite hover:text-red-500 transition-colors p-1">
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </div>
+                ))}
+                {recipeItems.length === 0 && <p className="text-[10px] text-graphite">No raw stock linked yet.</p>}
               </div>
             </div>
 

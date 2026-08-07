@@ -79,10 +79,12 @@ export async function request<T>(endpoint: string, options?: RequestInit): Promi
           throw new Error(retryErrBody.error?.message || `HTTP ${res.status}`);
         }
       } else {
-        throw new Error(errBody.error?.message || `HTTP ${res.status}`);
+        const msg = errBody.error?.details ? `${errBody.error?.message}: ${JSON.stringify(errBody.error.details)}` : errBody.error?.message;
+        throw new Error(msg || `HTTP ${res.status}`);
       }
     } else {
-      throw new Error(errBody.error?.message || `HTTP ${res.status}`);
+      const msg = errBody.error?.details ? `${errBody.error?.message}: ${JSON.stringify(errBody.error.details)}` : errBody.error?.message;
+      throw new Error(msg || `HTTP ${res.status}`);
     }
   }
 
