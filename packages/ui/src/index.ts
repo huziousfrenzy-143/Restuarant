@@ -17,7 +17,7 @@ export function formatCurrency(amount: number | string | undefined | null): stri
   const validNum = isNaN(numericVal) ? 0 : numericVal;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'PKR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(validNum);

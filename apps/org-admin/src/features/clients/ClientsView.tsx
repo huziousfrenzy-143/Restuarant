@@ -319,7 +319,7 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                               className="w-full px-3 py-2 text-left hover:bg-emerald-50 text-emerald-800 flex items-center gap-2 transition-colors font-semibold"
                             >
                               <DollarSign className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span>Clear Balance & Add Revenue</span>
+                              <span>Update</span>
                             </button>
 
                             <button
@@ -335,14 +335,14 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                     </td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button
+                        {/* <button
                           onClick={() => handleOpenWhatsApp(cli)}
                           title="Send WhatsApp Reminder Chat"
                           className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-emerald-600 fill-emerald-100 shrink-0" />
                           <span>WhatsApp</span>
-                        </button>
+                        </button> */}
                         <button onClick={() => openEditClient(cli)} title="Edit Customer" className="p-1.5 text-graphite hover:text-primary rounded hover:bg-steel"><Edit2 className="w-3.5 h-3.5" /></button>
                         <button onClick={() => setDeleteConfirm({ id: cli.id, name: cli.name })} title="Delete Customer" className="p-1.5 text-graphite hover:text-red-600 rounded hover:bg-steel"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>

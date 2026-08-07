@@ -28,7 +28,7 @@ interface ReportsViewProps {
 type TimeFilter = 'today' | 'week' | 'month' | 'all';
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sales, onRefreshData }) => {
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('today');
   const [useCustomRange, setUseCustomRange] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('00:00');
@@ -104,47 +104,105 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
   const totalTax = useMemo(() => filteredOrders.reduce((sum, o) => sum + Number(o.tax), 0), [filteredOrders]);
   const avgOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
 
-  // Interactive hourly revenue distribution calculation
-  const hourlyData = useMemo(() => {
-    const hourlyMap = new Map<
-      number,
-      {
-        revenue: number;
-        ordersCount: number;
-      }
-    >();
+  // Interactive revenue distribution and trend calculation
+  const chartData = useMemo(() => {
+    const dataMap = new Map<string, { label: string; revenue: number; ordersCount: number; sortKey: number }>();
 
-    // Create 24 hours (00 - 23)
-    for (let hour = 0; hour < 24; hour++) {
-      hourlyMap.set(hour, {
-        revenue: 0,
-        ordersCount: 0,
+    if (timeFilter === 'today' || (useCustomRange && startDate === endDate && startDate !== '')) {
+      for (let i = 0; i < 24; i++) {
+        const label = new Date(0, 0, 0, i).toLocaleTimeString([], { hour: 'numeric', hour12: true });
+        dataMap.set(i.toString(), { label, revenue: 0, ordersCount: 0, sortKey: i });
+      }
+      filteredOrders.forEach(order => {
+        const hour = new Date(order.created_at).getHours();
+        const current = dataMap.get(hour.toString())!;
+        current.revenue += Number(order.total);
+        current.ordersCount += 1;
       });
+    } else if (timeFilter === 'week') {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        const label = d.toLocaleDateString([], { weekday: 'short' });
+        dataMap.set(key, { label, revenue: 0, ordersCount: 0, sortKey: d.getTime() });
+      }
+      filteredOrders.forEach(o => {
+        const key = o.created_at.split('T')[0];
+        if (dataMap.has(key)) {
+          const current = dataMap.get(key)!;
+          current.revenue += Number(o.total);
+          current.ordersCount += 1;
+        }
+      });
+    } else if (timeFilter === 'month') {
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        const label = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        dataMap.set(key, { label, revenue: 0, ordersCount: 0, sortKey: d.getTime() });
+      }
+      filteredOrders.forEach(o => {
+        const key = o.created_at.split('T')[0];
+        if (dataMap.has(key)) {
+          const current = dataMap.get(key)!;
+          current.revenue += Number(o.total);
+          current.ordersCount += 1;
+        }
+      });
+    } else {
+      if (filteredOrders.length === 0) return [];
+      
+      const dates = filteredOrders.map(o => new Date(o.created_at).getTime());
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date();
+
+      if (timeFilter === 'all') {
+         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+         let curr = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+         const end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+         while (curr <= end) {
+           const key = `${curr.getFullYear()}-${curr.getMonth()}`;
+           const label = `${months[curr.getMonth()]} ${curr.getFullYear()}`;
+           dataMap.set(key, { label, revenue: 0, ordersCount: 0, sortKey: curr.getTime() });
+           curr.setMonth(curr.getMonth() + 1);
+         }
+         filteredOrders.forEach(o => {
+           const d = new Date(o.created_at);
+           const key = `${d.getFullYear()}-${d.getMonth()}`;
+           if (dataMap.has(key)) {
+             const current = dataMap.get(key)!;
+             current.revenue += Number(o.total);
+             current.ordersCount += 1;
+           }
+         });
+      } else {
+         const start = new Date(`${startDate}T00:00:00`);
+         const endObj = new Date(`${endDate}T23:59:59`);
+         let curr = new Date(start);
+         while (curr <= endObj) {
+           const key = curr.toISOString().split('T')[0];
+           const label = curr.toLocaleDateString([], { month: 'short', day: 'numeric' });
+           dataMap.set(key, { label, revenue: 0, ordersCount: 0, sortKey: curr.getTime() });
+           curr.setDate(curr.getDate() + 1);
+         }
+         filteredOrders.forEach(o => {
+           const key = o.created_at.split('T')[0];
+           if (dataMap.has(key)) {
+             const current = dataMap.get(key)!;
+             current.revenue += Number(o.total);
+             current.ordersCount += 1;
+           }
+         });
+      }
     }
 
-    filteredOrders.forEach(order => {
-      const date = new Date(order.created_at);
-      const hour = date.getHours();
+    return Array.from(dataMap.values()).sort((a, b) => a.sortKey - b.sortKey);
+  }, [filteredOrders, timeFilter, useCustomRange, startDate, endDate]);
 
-      const current = hourlyMap.get(hour)!;
-
-      current.revenue += Number(order.total);
-      current.ordersCount += 1;
-    });
-
-    return Array.from(hourlyMap.entries()).map(([hour, data]) => ({
-      hour,
-      label: new Date(0, 0, 0, hour).toLocaleTimeString([], {
-        hour: "numeric",
-        hour12: true,
-      }),
-      revenue: data.revenue,
-      ordersCount: data.ordersCount,
-    }));
-  }, [filteredOrders]);
-
-  const maxHourlyRevenue = Math.max(
-    ...hourlyData.map(h => h.revenue),
+  const maxChartRevenue = Math.max(
+    ...chartData.map(h => h.revenue),
     1
   );
 
@@ -159,14 +217,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
   };
 
   const linePath = useMemo(() => {
-    if (hourlyData.length === 0) return "";
+    if (chartData.length === 0) return "";
 
-    const points = hourlyData.map((item, idx) => ({
-      x: (idx / (hourlyData.length - 1)) * 100,
-      y:
-        maxHourlyRevenue > 0
-          ? 100 - (item.revenue / maxHourlyRevenue) * 95
-          : 100,
+    const points = chartData.map((item, idx) => ({
+      x: (idx / (chartData.length - 1 || 1)) * 100,
+      y: maxChartRevenue > 0 ? 100 - (item.revenue / maxChartRevenue) * 95 : 100,
     }));
 
     let d = `M ${points[0].x},${points[0].y}`;
@@ -182,7 +237,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
     }
 
     return d;
-  }, [hourlyData, maxHourlyRevenue]);
+  }, [chartData, maxChartRevenue]);
 
 
   const handleExportCsv = () => {
@@ -343,7 +398,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
         <h3 className="font-bold text-sm text-ink flex items-center justify-between border-b border-mist pb-3">
           <span className="flex items-center gap-2 font-mono">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <span>Interactive Sales Revenue Distribution & Peak Hours Trend</span>
+            <span>Interactive Sales Revenue Trend</span>
           </span>
           <span className="font-mono text-xs text-graphite uppercase font-bold">
             Hover columns to view details
@@ -361,9 +416,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
           <svg viewBox="0 0 100 100" className="absolute inset-x-0 top-6 bottom-8 w-full h-[calc(100%-3.5rem)] overflow-visible z-10 pointer-events-none" preserveAspectRatio="none">
             {/* Area under the line */}
             <polygon
-              points={`0,100 ${hourlyData.map((item, idx) => {
-                const x = (idx / (hourlyData.length - 1)) * 100;
-                const y = maxHourlyRevenue > 0 ? 100 - (item.revenue / maxHourlyRevenue) * 95 : 100;
+              points={`0,100 ${chartData.map((item, idx) => {
+                const x = (idx / (chartData.length - 1 || 1)) * 100;
+                const y = maxChartRevenue > 0 ? 100 - (item.revenue / maxChartRevenue) * 95 : 100;
                 return `${x},${y}`;
               }).join(' ')} 100,100`}
               fill="var(--color-primary)"
@@ -382,10 +437,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
 
           {/* Interactive Data Points */}
           <div className="absolute inset-x-0 top-6 bottom-8 z-20">
-            {hourlyData.map((item, idx) => {
-              const xPercent = (idx / (hourlyData.length - 1)) * 100;
-              const yPercent = maxHourlyRevenue > 0 ? 100 - (item.revenue / maxHourlyRevenue) * 95 : 100;
+            {chartData.map((item, idx) => {
+              const xPercent = (idx / (chartData.length - 1 || 1)) * 100;
+              const yPercent = maxChartRevenue > 0 ? 100 - (item.revenue / maxChartRevenue) * 95 : 100;
               const isHovered = activeHoverBar === idx;
+              const labelInterval = Math.ceil(chartData.length / 8);
 
               return (
                 <div
@@ -401,7 +457,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
                       className="absolute z-30 bg-ink text-white p-2.5 rounded-lg shadow-xl text-[10px] whitespace-nowrap font-mono space-y-1 animate-in fade-in zoom-in-95 duration-150 pointer-events-none border border-white/10"
                       style={{ bottom: `calc(${100 - yPercent}% + 16px)` }}
                     >
-                      <div className="font-bold text-primary text-xs border-b border-white/20 pb-1 mb-1">{idx % 3 === 0 ? item.label : ""}</div>
+                      <div className="font-bold text-primary text-xs border-b border-white/20 pb-1 mb-1">{item.label}</div>
                       <div className="flex justify-between gap-4">
                         <span className="text-white/60">Revenue</span>
                         <strong className="text-emerald-400">{formatCurrency(item.revenue)}</strong>
@@ -426,9 +482,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ orders, inventory, sal
                   <div className="w-full h-full absolute inset-0 z-10" />
 
                   {/* X Axis Label */}
-                  <span className={`absolute -bottom-7 text-[10px] font-bold whitespace-nowrap transition-colors ${isHovered ? 'text-primary' : 'text-ink'
+                  <span className={`absolute -bottom-7 text-[10px] font-bold whitespace-nowrap transition-colors ${isHovered ? 'text-primary z-30' : 'text-ink'
                     }`}>
-                    {idx % 3 === 0 ? item.label : ""}
+                    {idx % labelInterval === 0 || idx === chartData.length - 1 ? item.label : ""}
                   </span>
                 </div>
               );
