@@ -2,6 +2,7 @@
   "expo": {
     "name": "Saffron SaaS Mobile",
     "slug": "saffron-saas-mobile",
+    "owner": "arhamsaif",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
