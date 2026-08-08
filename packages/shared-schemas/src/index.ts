@@ -150,6 +150,14 @@ export const ProductRecipeItemSchema = z.object({
 export type ProductRecipeItem = z.infer<typeof ProductRecipeItemSchema>;
 
 // Product Schema & Create Product
+export const ProductVariantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.coerce.number().nonnegative(),
+  cost_price: z.coerce.number().nonnegative().optional()
+});
+export type ProductVariant = z.infer<typeof ProductVariantSchema>;
+
 export const ProductSchema = z.object({
   id: z.string(),
   category_id: z.string(),
@@ -160,7 +168,8 @@ export const ProductSchema = z.object({
   sku: z.string(),
   is_available: z.boolean(),
   image_url: z.string().optional(),
-  recipe: z.array(ProductRecipeItemSchema).default([])
+  recipe: z.array(ProductRecipeItemSchema).default([]),
+  variants: z.array(ProductVariantSchema).default([])
 });
 export type Product = z.infer<typeof ProductSchema>;
 
@@ -172,7 +181,8 @@ export const CreateProductInputSchema = z.object({
   sku: z.string().min(2, "SKU is required"),
   is_available: z.boolean().default(true),
   image_url: z.string().optional(),
-  recipe: z.array(ProductRecipeItemSchema).default([])
+  recipe: z.array(ProductRecipeItemSchema).default([]),
+  variants: z.array(ProductVariantSchema).default([])
 });
 export type CreateProductInput = z.infer<typeof CreateProductInputSchema>;
 
@@ -235,6 +245,8 @@ export const OrderItemSchema = z.object({
   id: z.string().optional(),
   product_id: z.string(),
   product_name: z.string(),
+  variant_id: z.string().optional(),
+  variant_name: z.string().optional(),
   qty: z.coerce.number().positive(),
   unit_price: z.coerce.number().nonnegative(),
   notes: z.string().optional()
@@ -273,6 +285,8 @@ export const CreateOrderInputSchema = z.object({
   items: z.array(z.object({
     product_id: z.string(),
     product_name: z.string(),
+    variant_id: z.string().optional(),
+    variant_name: z.string().optional(),
     qty: z.coerce.number().positive(),
     unit_price: z.coerce.number().nonnegative(),
     notes: z.string().optional()

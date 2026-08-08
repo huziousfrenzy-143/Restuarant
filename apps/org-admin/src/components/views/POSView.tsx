@@ -25,6 +25,7 @@ export const POSView: React.FC = () => {
     lastReceipt, setLastReceipt,
     isMobileCartOpen, setIsMobileCartOpen,
     customTaxPercent, setCustomTaxPercent,
+    variantSelectionProduct, setVariantSelectionProduct,
     filteredProducts,
     filteredClients,
     selectedClient,
@@ -39,7 +40,6 @@ export const POSView: React.FC = () => {
     totalPayable,
     handleChargeSubmit
   } = usePOSController();
-  console.log(clientSearchQuery);
 
   return (
     <div className="flex flex-col md:flex-row flex-1 min-h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] overflow-hidden font-sans relative">
@@ -275,7 +275,7 @@ export const POSView: React.FC = () => {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.product_id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
+              <div key={item.id} className="pt-3 first:pt-0 flex items-center justify-between gap-3">
                 <div className="flex-1">
                   <h4 className="font-semibold text-xs text-ink leading-tight">{item.product_name}</h4>
                   <p className="text-[11px] font-mono text-graphite tabular-nums">
@@ -285,20 +285,20 @@ export const POSView: React.FC = () => {
 
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => updateQty(item.product_id, -1)}
+                    onClick={() => updateQty(item.id!, -1)}
                     className="p-1 rounded bg-steel border border-mist hover:bg-mist text-ink"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="w-6 text-center font-mono font-bold text-xs">{item.qty}</span>
                   <button
-                    onClick={() => updateQty(item.product_id, 1)}
+                    onClick={() => updateQty(item.id!, 1)}
                     className="p-1 rounded bg-steel border border-mist hover:bg-mist text-ink"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                   <button
-                    onClick={() => removeFromCart(item.product_id)}
+                    onClick={() => removeFromCart(item.id!)}
                     className="p-1 text-graphite hover:text-danger ml-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -518,6 +518,35 @@ export const POSView: React.FC = () => {
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Variant Selection Modal */}
+      {variantSelectionProduct && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface border border-mist rounded-lg shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-mist pb-3">
+              <h3 className="font-bold text-base text-ink flex items-center gap-2">
+                <span>Select Size: {variantSelectionProduct.name}</span>
+              </h3>
+              <button onClick={() => setVariantSelectionProduct(null)} className="text-graphite hover:text-ink">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto scrollbar-none">
+              {variantSelectionProduct.variants?.map(variant => (
+                <button
+                  key={variant.id}
+                  onClick={() => addToCart(variantSelectionProduct, variant)}
+                  className="w-full p-4 rounded-lg border border-mist bg-surface hover:border-primary hover:bg-steel transition-all flex items-center justify-between group"
+                >
+                  <span className="font-bold text-sm text-ink group-hover:text-primary transition-colors">{variant.name}</span>
+                  <span className="font-mono font-bold text-sm text-primary">{formatCurrency(variant.price)}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

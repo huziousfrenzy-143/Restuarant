@@ -3,7 +3,7 @@ import { Order, Client } from '@restaurant-saas/shared-schemas';
 
 export interface PendingSyncItem {
   id: string;
-  type: 'CREATE_ORDER' | 'UPDATE_ORDER_STATUS' | 'CREATE_CLIENT' | 'UPDATE_CLIENT' | 'PAY_CLIENT_CREDIT' | 'DELETE_CLIENT';
+  type: 'CREATE_ORDER' | 'UPDATE_ORDER_STATUS' | 'UPDATE_ORDER_ITEMS' | 'CREATE_CLIENT' | 'UPDATE_CLIENT' | 'PAY_CLIENT_CREDIT' | 'DELETE_CLIENT' | 'CHECKOUT_ORDER';
   payload: any;
   timestamp: string;
 }

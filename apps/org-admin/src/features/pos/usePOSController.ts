@@ -32,6 +32,7 @@ export const usePOSController = () => {
   const [lastReceipt, setLastReceipt] = useState<any>(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
   const [customTaxPercent, setCustomTaxPercent] = useState<number | null>(null);
+  const [variantSelectionProduct, setVariantSelectionProduct] = useState<Product | null>(null);
 
   const activeTaxRate = customTaxPercent !== null ? customTaxPercent : taxRate;
 
@@ -50,12 +51,20 @@ export const usePOSController = () => {
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, selectedVariant?: any) => {
+    if (!selectedVariant && product.variants && product.variants.length > 0) {
+      setVariantSelectionProduct(product);
+      return;
+    }
+
+    const cartProductName = selectedVariant ? `${product.name} (${selectedVariant.name})` : product.name;
+    const cartProductPrice = selectedVariant ? selectedVariant.price : product.price;
+
     setCart(prev => {
-      const existing = prev.find(item => item.product_id === product.id);
+      const existing = prev.find(item => item.product_id === product.id && item.variant_id === selectedVariant?.id);
       if (existing) {
         return prev.map(item =>
-          item.product_id === product.id
+          (item.product_id === product.id && item.variant_id === selectedVariant?.id)
             ? { ...item, qty: item.qty + 1 }
             : item
         );
@@ -65,19 +74,22 @@ export const usePOSController = () => {
         {
           id: `oi-${Date.now()}-${product.id}`,
           product_id: product.id,
-          product_name: product.name,
+          product_name: cartProductName,
+          variant_id: selectedVariant?.id,
+          variant_name: selectedVariant?.name,
           qty: 1,
-          unit_price: product.price
+          unit_price: Number(cartProductPrice)
         }
       ];
     });
+    setVariantSelectionProduct(null);
   };
 
-  const updateQty = (productId: string, delta: number) => {
+  const updateQty = (cartItemId: string, delta: number) => {
     setCart(prev =>
       prev
         .map(item => {
-          if (item.product_id === productId) {
+          if (item.id === cartItemId) {
             const newQty = item.qty + delta;
             return newQty > 0 ? { ...item, qty: newQty } : null;
           }
@@ -87,8 +99,8 @@ export const usePOSController = () => {
     );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product_id !== productId));
+  const removeFromCart = (cartItemId: string) => {
+    setCart(prev => prev.filter(item => item.id !== cartItemId));
   };
 
   const getCategoryName = (categoryId: string): string => {
@@ -159,6 +171,7 @@ export const usePOSController = () => {
     lastReceipt, setLastReceipt,
     isMobileCartOpen, setIsMobileCartOpen,
     customTaxPercent, setCustomTaxPercent,
+    variantSelectionProduct, setVariantSelectionProduct,
     filteredProducts,
     filteredClients,
     selectedClient,

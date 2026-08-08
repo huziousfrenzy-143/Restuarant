@@ -46,6 +46,7 @@ export const ProductsView: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [recipeItems, setRecipeItems] = useState<{ id: string; qty: number }[]>([]);
+  const [variants, setVariants] = useState<{ id: string; name: string; price: number }[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Auto-calculate cost price when recipe items change
@@ -141,7 +142,8 @@ export const ProductsView: React.FC = () => {
       sku,
       is_available: true,
       image_url: imageUrl,
-      recipe
+      recipe,
+      variants
     };
 
     if (editingProduct) {
@@ -155,6 +157,7 @@ export const ProductsView: React.FC = () => {
     setSku('');
     setImageUrl('');
     setRecipeItems([]);
+    setVariants([]);
     setFormError(null);
     setIsProductModalOpen(false);
   };
@@ -171,6 +174,11 @@ export const ProductsView: React.FC = () => {
       setRecipeItems(prod.recipe.map(r => ({ id: r.inventory_item_id, qty: Number(r.qty_required) })));
     } else {
       setRecipeItems([]);
+    }
+    if (prod.variants && prod.variants.length > 0) {
+      setVariants(prod.variants.map(v => ({ id: v.id, name: v.name, price: Number(v.price) })));
+    } else {
+      setVariants([]);
     }
     setFormError(null);
     setIsProductModalOpen(true);
@@ -225,7 +233,7 @@ export const ProductsView: React.FC = () => {
             <span>Add Category</span>
           </button>
           <button
-            onClick={() => { setEditingProduct(null); setName(''); setSku(''); setImageUrl(''); setRecipeItems([]); setFormError(null); setIsProductModalOpen(true); }}
+            onClick={() => { setEditingProduct(null); setName(''); setSku(''); setImageUrl(''); setRecipeItems([]); setVariants([]); setFormError(null); setIsProductModalOpen(true); }}
             className="px-4 py-2 rounded-md bg-primary text-white text-xs font-bold hover:bg-primary-hover transition-all flex items-center gap-2 shadow-sm font-mono"
           >
             <Plus className="w-4 h-4" />
@@ -375,7 +383,7 @@ export const ProductsView: React.FC = () => {
       {/* Create / Edit Product Modal with Cloudinary Upload */}
       {isProductModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleProductSubmit} className="bg-surface border border-mist rounded-lg shadow-xl w-full max-w-md p-6 space-y-4 font-sans">
+          <form onSubmit={handleProductSubmit} className="bg-surface border border-mist rounded-lg shadow-xl w-full max-w-md p-6 space-y-4 font-sans max-h-[90vh] overflow-y-auto scrollbar-none">
             <div className="flex items-center justify-between border-b border-mist pb-3 font-mono">
               <h3 className="font-bold text-sm text-ink flex items-center gap-2">
                 <UtensilsCrossed className="w-4 h-4 text-primary" />
@@ -541,6 +549,49 @@ export const ProductsView: React.FC = () => {
                   </div>
                 ))}
                 {recipeItems.length === 0 && <p className="text-[10px] text-graphite">No raw stock linked yet.</p>}
+              </div>
+
+              {/* Product Sizes / Variants */}
+              <div className="p-3 bg-steel/50 border border-mist rounded space-y-2">
+                <label className="text-graphite block font-semibold flex justify-between items-center">
+                  <span>Product Sizes / Variants</span>
+                  <button type="button" onClick={() => setVariants([...variants, { id: `var-${Date.now()}`, name: 'Small', price: 0 }])} className="text-primary hover:text-primary-hover text-[10px] flex items-center gap-1 font-bold"><Plus className="w-3 h-3"/> Add Size</button>
+                </label>
+                {variants.map((v, index) => (
+                  <div key={v.id} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={v.name}
+                      onChange={e => {
+                        const newVars = [...variants];
+                        newVars[index].name = e.target.value;
+                        setVariants(newVars);
+                      }}
+                      className="flex-1 p-1.5 rounded border border-mist bg-surface text-xs font-bold"
+                      placeholder="Size Name (e.g. Large)"
+                    />
+                    <span className="text-graphite font-bold">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={v.price}
+                      onChange={e => {
+                        const newVars = [...variants];
+                        newVars[index].price = parseFloat(e.target.value) || 0;
+                        setVariants(newVars);
+                      }}
+                      className="w-24 p-1.5 rounded border border-mist bg-surface text-xs font-bold"
+                      placeholder="Price"
+                    />
+                    <button type="button" onClick={() => {
+                        const newVars = variants.filter((_, i) => i !== index);
+                        setVariants(newVars);
+                    }} className="text-graphite hover:text-red-500 transition-colors p-1">
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </div>
+                ))}
+                {variants.length === 0 && <p className="text-[10px] text-graphite">No custom sizes (uses base price).</p>}
               </div>
             </div>
 

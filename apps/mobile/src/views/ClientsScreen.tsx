@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Alert, Linking } from 'react-native';
 import { Client } from '@restaurant-saas/shared-schemas';
 import { LightColors, LineModeColors } from '../theme/colors';
-import { Users, Search, Plus, Phone, MapPin, FileText, Download, CreditCard, X, Edit2, Trash2, DollarSign } from 'lucide-react-native';
+import { Users, Search, Plus, Phone, MapPin, FileText, Download, CreditCard, X, Edit2, Trash2, DollarSign, MessageCircle } from 'lucide-react-native';
 import { exportToExcel } from '../utils/exportUtils';
 
 interface ClientsScreenProps {
@@ -155,6 +155,28 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
     exportToExcel(data, `Customers_Export_${Date.now()}`, 'Customers');
   };
 
+  const handleOpenWhatsApp = (client: Client) => {
+    const rawPhone = (client.phone || '').replace(/[^0-9]/g, '');
+    const dueAmount = toNum(client.credit_balance);
+
+    if (!rawPhone) {
+      Alert.alert('Error', 'Customer does not have a valid phone number.');
+      return;
+    }
+
+    let message = `Hello ${client.name}, this is a polite account statement reminder from your store. `;
+    if (dueAmount > 0) {
+      message += `Your current outstanding due credit balance is $${dueAmount.toFixed(2)}. Kindly settle your balance at your convenience. Thank you!`;
+    } else {
+      message += `Thank you for being a valued customer! Let us know if you would like to place an order today.`;
+    }
+
+    const targetUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(message)}`;
+    Linking.openURL(targetUrl).catch(() => {
+      Alert.alert('Error', 'Failed to open WhatsApp. Make sure it is installed.');
+    });
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.steel }]}>
       {/* Header Search & Add Customer Bar */}
@@ -243,9 +265,17 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                 </View>
 
                 {/* Card Action Buttons: Pay Debt, Edit, Delete */}
-                <View style={[styles.cardActionsRow, { borderTopColor: colors.mist }]}>
+                <View style={[styles.cardActionsRow, { borderTopColor: colors.mist, flexWrap: 'wrap' }]}>
                   <TouchableOpacity
-                    style={[styles.actionChip, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]}
+                    style={[styles.actionChip, { backgroundColor: '#ECFDF5', borderColor: '#10B981', marginBottom: 6 }]}
+                    onPress={() => handleOpenWhatsApp(c)}
+                  >
+                    <MessageCircle size={12} color="#059669" style={{ marginRight: 3 }} />
+                    <Text style={[styles.actionChipText, { color: '#059669' }]}>WHATSAPP</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionChip, { backgroundColor: colors.primaryLight, borderColor: colors.primary, marginBottom: 6 }]}
                     onPress={() => openPayModal(c)}
                   >
                     <DollarSign size={12} color={colors.primary} style={{ marginRight: 3 }} />
@@ -255,7 +285,7 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.actionChip, { backgroundColor: colors.steel, borderColor: colors.mist }]}
+                    style={[styles.actionChip, { backgroundColor: colors.steel, borderColor: colors.mist, marginBottom: 6 }]}
                     onPress={() => openEditModal(c)}
                   >
                     <Edit2 size={12} color={colors.ink} style={{ marginRight: 3 }} />
@@ -263,7 +293,7 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.actionChip, { backgroundColor: '#FEF2F2', borderColor: '#F87171' }]}
+                    style={[styles.actionChip, { backgroundColor: '#FEF2F2', borderColor: '#F87171', marginBottom: 6 }]}
                     onPress={() => handleDeletePrompt(c)}
                   >
                     <Trash2 size={12} color="#DC2626" style={{ marginRight: 3 }} />

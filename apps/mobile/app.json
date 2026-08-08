@@ -10,6 +10,12 @@
       "supportsTablet": true
     },
     "sdkVersion": "52.0.0",
+    "icon": "./src/logo.png",
+    "splash": {
+      "image": "./src/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "extra": {
       "eas": {
         "projectId": "dbcc26f1-5df3-4bb6-afbf-249e7234c656"

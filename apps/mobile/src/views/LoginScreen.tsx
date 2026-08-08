@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 import { LightColors, LineModeColors } from '../theme/colors';
 import { requestOtpApi, verifyOtpApi, loginStaffApi } from '../services/api';
 import { AlertTriangle, X, ArrowLeft, Zap } from 'lucide-react-native';
@@ -11,8 +11,8 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLineMode }) => {
   const colors = isLineMode ? LineModeColors : LightColors;
-  const [email, setEmail] = useState('owner@saffrongrill.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('employee@gmail.com');
+  const [password, setPassword] = useState('password');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [loading, setLoading] = useState(false);
@@ -24,11 +24,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLine
     if (typeof window !== 'undefined' && window.alert) {
       try {
         window.alert(`${title}: ${msg}`);
-      } catch (_) {}
+      } catch (_) { }
     }
   };
 
-  // Step 1: Request Email OTP Code
   const handleRequestOtp = async () => {
     setErrorMessage(null);
     if (!email || !password) {
@@ -42,19 +41,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLine
       setStep('verify');
       Alert.alert('OTP Sent', `A 6-digit verification code was sent to ${email}`);
     } catch (err: any) {
-      // Direct login fallback if OTP bypass mode active
+      // Direct login fallback for staff accounts (salesman, chef, etc)
       try {
-        const res = await loginStaffApi(email);
+        const res = await loginStaffApi(email, password);
         setLoading(false);
         onLoginSuccess(res.user, res.org, res.userOrgs);
       } catch (loginErr: any) {
         setLoading(false);
-        showError('Authentication Error', err?.message || loginErr?.message || 'Failed to request OTP');
+        showError('Authentication Error', loginErr?.message || err?.message || 'Login failed.');
       }
     }
   };
 
-  // Step 2: Verify 6-digit OTP Code
   const handleVerifyOtp = async () => {
     setErrorMessage(null);
     if (!otp || otp.length < 6) {
@@ -77,24 +75,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLine
     <View style={[styles.container, { backgroundColor: colors.steel }]}>
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.mist }]}>
         <View style={styles.header}>
-          <View style={[styles.logoBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.logoText}>SG</Text>
-          </View>
-          <Text style={[styles.title, { color: colors.ink }]}>Saffron SaaS Mobile</Text>
-          <Text style={[styles.subtitle, { color: colors.graphite }]}>
-            Multi-Tenant Operational POS & Kitchen KDS
-          </Text>
+          <Image source={require('../logo.png')} style={{ width: 64, height: 64, marginBottom: 12 }} resizeMode="contain" />
+          <Text style={[styles.title, { color: colors.ink }]}>Restuarant Manager</Text>
         </View>
 
         {errorMessage && (
-          <View style={styles.errorBox}>
-            <View style={styles.errorHeaderRow}>
-              <AlertTriangle size={14} color="#991B1B" style={{ marginRight: 6 }} />
-              <Text style={styles.errorBoxTitle}>Authentication Error</Text>
+          <View style={[styles.errorBox, { shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }]}>
+            <View style={styles.errorIconContainer}>
+              <AlertTriangle size={20} color="#EF4444" />
             </View>
-            <Text style={styles.errorBoxMsg}>{errorMessage}</Text>
+            <View style={styles.errorContent}>
+              <Text style={styles.errorBoxTitle}>Access Denied</Text>
+              <Text style={styles.errorBoxMsg}>{errorMessage}</Text>
+            </View>
             <TouchableOpacity onPress={() => setErrorMessage(null)} style={styles.errorDismissBtn}>
-              <X size={14} color="#991B1B" />
+              <X size={16} color="#991B1B" />
             </TouchableOpacity>
           </View>
         )}
@@ -109,7 +104,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLine
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
-                placeholder="owner@restaurant.com"
+                placeholder="staff@restaurant.com"
                 placeholderTextColor={colors.graphite}
               />
             </View>
@@ -134,7 +129,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLine
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>REQUEST EMAIL OTP CODE</Text>
+                <Text style={styles.buttonText}>SIGN IN / REQUEST OTP</Text>
               )}
             </TouchableOpacity>
           </>
@@ -185,7 +180,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, isLine
         <View style={styles.demoBanner}>
           <Zap size={12} color={colors.primary} style={{ marginRight: 4 }} />
           <Text style={[styles.demoText, { color: colors.graphite }]}>
-            Multi-Tenant Staff 2-Step OTP Authentication
+            Multi-Tenant Staff & Admin Authentication
           </Text>
         </View>
       </View>
@@ -203,17 +198,28 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, marginTop: 4, textAlign: 'center' },
   errorBox: {
     backgroundColor: '#FEF2F2',
-    borderColor: '#F87171',
+    borderColor: '#FECACA',
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 14,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
     position: 'relative'
   },
-  errorHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-  errorBoxTitle: { color: '#991B1B', fontSize: 11, fontWeight: 'bold', fontFamily: 'monospace' },
-  errorBoxMsg: { color: '#B91C1C', fontSize: 11, marginTop: 2 },
-  errorDismissBtn: { position: 'absolute', top: 10, right: 10, padding: 4 },
+  errorIconContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  errorContent: {
+    flex: 1,
+    marginRight: 24,
+  },
+  errorBoxTitle: { color: '#991B1B', fontSize: 13, fontWeight: 'bold' },
+  errorBoxMsg: { color: '#B91C1C', fontSize: 12, marginTop: 4, lineHeight: 16 },
+  errorDismissBtn: { position: 'absolute', top: 12, right: 12, padding: 4 },
   formGroup: { marginBottom: 14 },
   label: { fontSize: 9.5, fontWeight: 'bold', marginBottom: 6, letterSpacing: 0.5, fontFamily: 'monospace' },
   input: { height: 50, borderRadius: 10, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },

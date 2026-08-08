@@ -44,6 +44,7 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+  const [variantSelectionProduct, setVariantSelectionProduct] = useState<Product | null>(null);
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway' | 'delivery'>('dine_in');
   const [tableNo, setTableNo] = useState('T4');
 
@@ -52,6 +53,9 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isClientPickerOpen, setIsClientPickerOpen] = useState(false);
+
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [customTaxPercent, setCustomTaxPercent] = useState<number>(10);
 
   const categories = Array.from(new Set(products.map(p => p.category_name)));
 
@@ -66,12 +70,21 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
     (c.phone || '').includes(customerSearch)
   );
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, selectedVariant?: any) => {
+    if (!selectedVariant && product.variants && product.variants.length > 0) {
+      setVariantSelectionProduct(product);
+      return;
+    }
+
+    const cartProductName = selectedVariant ? `${product.name} (${selectedVariant.name})` : product.name;
+    const cartProductPrice = selectedVariant ? selectedVariant.price : product.price;
+
     setCart(prev => {
-      const existing = prev.find(item => item.product_id === product.id);
+      const existing = prev.find(item => item.product_id === product.id && item.variant_id === selectedVariant?.id);
       if (existing) {
         return prev.map(item =>
-          item.product_id === product.id ? { ...item, qty: item.qty + 1 } : item
+          (item.product_id === product.id && item.variant_id === selectedVariant?.id) 
+            ? { ...item, qty: item.qty + 1 } : item
         );
       }
       return [
@@ -79,19 +92,22 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
         {
           id: `oi-${Date.now()}-${product.id}`,
           product_id: product.id,
-          product_name: product.name,
+          product_name: cartProductName,
+          variant_id: selectedVariant?.id,
+          variant_name: selectedVariant?.name,
           qty: 1,
-          unit_price: toNum(product.price)
+          unit_price: toNum(cartProductPrice)
         }
       ];
     });
+    setVariantSelectionProduct(null);
   };
 
-  const updateQty = (productId: string, delta: number) => {
+  const updateQty = (cartItemId: string, delta: number) => {
     setCart(prev =>
       prev
         .map(item => {
-          if (item.product_id === productId) {
+          if (item.id === cartItemId) {
             const newQty = item.qty + delta;
             return newQty > 0 ? { ...item, qty: newQty } : null;
           }
@@ -108,8 +124,10 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
 
   const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
   const subtotal = cart.reduce((sum, i) => sum + i.qty * toNum(i.unit_price), 0);
-  const tax = subtotal * 0.1;
-  const grandTotal = subtotal + tax;
+  const discountAmount = subtotal * (discountPercent / 100);
+  const taxableTotal = subtotal - discountAmount;
+  const tax = taxableTotal * (customTaxPercent / 100);
+  const grandTotal = taxableTotal + tax;
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -129,6 +147,7 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
       payment_method: paymentMethod,
       items: cart,
       subtotal,
+      discount: discountAmount,
       tax,
       total: grandTotal,
       status: 'new'
@@ -137,6 +156,7 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
     onCompleteOrder(newOrder);
     setCart([]);
     setSelectedClient(null);
+    setDiscountPercent(0);
     setIsCartModalOpen(false);
     Alert.alert(
       'Order Processed',
@@ -370,14 +390,14 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
                   <View style={styles.qtyControl}>
                     <TouchableOpacity
                       style={[styles.qtyBtn, { backgroundColor: colors.steel, borderColor: colors.mist }]}
-                      onPress={() => updateQty(item.product_id, -1)}
+                      onPress={() => updateQty(item.id!, -1)}
                     >
                       <Minus size={14} color={colors.ink} />
                     </TouchableOpacity>
                     <Text style={[styles.qtyNum, { color: colors.ink }]}>{item.qty}</Text>
                     <TouchableOpacity
                       style={[styles.qtyBtn, { backgroundColor: colors.steel, borderColor: colors.mist }]}
-                      onPress={() => updateQty(item.product_id, 1)}
+                      onPress={() => updateQty(item.id!, 1)}
                     >
                       <Plus size={14} color={colors.ink} />
                     </TouchableOpacity>
@@ -396,10 +416,33 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
                 <Text style={[styles.summaryLabel, { color: colors.graphite }]}>Subtotal</Text>
                 <Text style={[styles.summaryVal, { color: colors.ink }]}>${subtotal.toFixed(2)}</Text>
               </View>
+              
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.graphite }]}>Tax (10%)</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[styles.summaryLabel, { color: colors.graphite }]}>Discount (%)</Text>
+                  <TextInput
+                    style={[styles.smallInput, { color: colors.ink, borderColor: colors.mist }]}
+                    keyboardType="numeric"
+                    value={discountPercent.toString()}
+                    onChangeText={(v) => setDiscountPercent(Math.max(0, toNum(v)))}
+                  />
+                </View>
+                <Text style={[styles.summaryVal, { color: colors.danger }]}>-${discountAmount.toFixed(2)}</Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[styles.summaryLabel, { color: colors.graphite }]}>Tax Rate (%)</Text>
+                  <TextInput
+                    style={[styles.smallInput, { color: colors.ink, borderColor: colors.mist }]}
+                    keyboardType="numeric"
+                    value={customTaxPercent.toString()}
+                    onChangeText={(v) => setCustomTaxPercent(Math.max(0, toNum(v)))}
+                  />
+                </View>
                 <Text style={[styles.summaryVal, { color: colors.ink }]}>${tax.toFixed(2)}</Text>
               </View>
+
               <View style={[styles.summaryRow, styles.totalRow]}>
                 <Text style={[styles.totalLabel, { color: colors.ink }]}>Total Due</Text>
                 <Text style={[styles.totalVal, { color: colors.primary }]}>${grandTotal.toFixed(2)}</Text>
@@ -463,6 +506,35 @@ export const POSScreen: React.FC<POSScreenProps> = ({ products, clients = [], on
                   </View>
                   <Text style={[styles.creditBal, { color: toNum(client.credit_balance) > 0 ? colors.danger : colors.primary }]}>
                     Debt: ${toNum(client.credit_balance).toFixed(2)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Variant Selection Modal */}
+      <Modal visible={!!variantSelectionProduct} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, { color: colors.ink }]}>Select Size: {variantSelectionProduct?.name}</Text>
+              <TouchableOpacity onPress={() => setVariantSelectionProduct(null)}>
+                <X size={22} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView>
+              {variantSelectionProduct?.variants?.map(variant => (
+                <TouchableOpacity
+                  key={variant.id}
+                  style={[styles.clientPickerItem, { borderColor: colors.mist, backgroundColor: colors.surface }]}
+                  onPress={() => addToCart(variantSelectionProduct, variant)}
+                >
+                  <Text style={[styles.clientPickerName, { color: colors.ink }]}>{variant.name}</Text>
+                  <Text style={[styles.totalVal, { color: colors.primary, fontSize: 16 }]}>
+                    ${toNum(variant.price).toFixed(2)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -537,5 +609,6 @@ const styles = StyleSheet.create({
   clientPickerItem: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   clientPickerName: { fontSize: 14, fontWeight: 'bold' },
   clientPickerSub: { fontSize: 11, fontFamily: 'monospace', marginTop: 2 },
-  creditBal: { fontSize: 12, fontWeight: 'bold', fontFamily: 'monospace' }
+  creditBal: { fontSize: 12, fontWeight: 'bold', fontFamily: 'monospace' },
+  smallInput: { height: 26, width: 44, borderRadius: 4, borderWidth: 1, marginLeft: 8, paddingHorizontal: 6, fontSize: 11, textAlign: 'center', fontFamily: 'monospace' }
 });

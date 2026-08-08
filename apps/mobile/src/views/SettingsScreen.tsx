@@ -37,8 +37,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* Header Profile Summary */}
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.mist }]}>
         <Text style={[styles.sectionTitle, { color: colors.graphite }]}>STAFF PROFILE SESSION</Text>
-        <View style={styles.profileRow}>
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+        <View style={styles.userRow}>
+          <View style={[styles.userAvatar, { backgroundColor: colors.primary }]}>
             <Text style={styles.avatarText}>
               {(currentUser?.name || 'U').substring(0, 2).toUpperCase()}
             </Text>

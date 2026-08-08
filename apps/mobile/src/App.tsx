@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, StatusBar, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
 import { Order, OrderStatus, Product, InventoryItem, Client } from '@restaurant-saas/shared-schemas';
 import { LightColors, LineModeColors } from './theme/colors';
 
@@ -14,13 +14,14 @@ import { ClientsScreen } from './views/ClientsScreen';
 import { SettingsScreen } from './views/SettingsScreen';
 import { TasksScreen } from './views/TasksScreen';
 import { LedgerScreen } from './views/LedgerScreen';
-
+import { SkeletonLoader } from './components/SkeletonLoader';
 import {
   switchOrgApi,
   fetchProductsApi,
   fetchOrdersApi,
   createOrderApi,
   updateOrderStatusApi,
+  updateOrderItemsApi,
   fetchInventoryApi,
   fetchClientsApi,
   createClientApi,
@@ -60,7 +61,8 @@ import {
   Sun,
   Flame as FireIcon,
   CheckCircle2,
-  BookOpen
+  BookOpen,
+  RefreshCw
 } from 'lucide-react-native';
 
 export default function App() {
@@ -210,6 +212,8 @@ export default function App() {
             await checkoutApi(currentOrg.id, item.payload);
           } else if (item.type === 'UPDATE_ORDER_STATUS') {
             await updateOrderStatusApi(currentOrg.id, item.payload.id, item.payload.status);
+          } else if (item.type === 'UPDATE_ORDER_ITEMS') {
+            await updateOrderItemsApi(currentOrg.id, item.payload.id, item.payload.items);
           } else if (item.type === 'CREATE_CLIENT') {
             await createClientApi(currentOrg.id, item.payload);
           } else if (item.type === 'UPDATE_CLIENT') {
@@ -341,6 +345,19 @@ export default function App() {
     setPendingQueue(newQueue);
   };
 
+  // Local-First Order Items Update
+  const handleUpdateOrderItems = async (orderId: string, items: any[], newTotal: number, newSubtotal: number, newTax: number) => {
+    const updatedOrders = orders.map(o => (o.id === orderId ? { ...o, items, total: newTotal, subtotal: newSubtotal, tax: newTax } : o));
+    setOrders(updatedOrders);
+    await saveLocalOrders(updatedOrders);
+
+    const newQueue = await addPendingSyncItem({
+      type: 'UPDATE_ORDER_ITEMS',
+      payload: { id: orderId, items }
+    });
+    setPendingQueue(newQueue);
+  };
+
   // Local-First Customer Creation
   const handleAddClient = async (newClientPayload: Partial<Client>) => {
     const tempClient: Client = {
@@ -463,7 +480,9 @@ export default function App() {
         return (
           <OrdersScreen
             orders={orders}
+            products={products}
             onUpdateOrderStatus={handleUpdateOrderStatus}
+            onUpdateOrderItems={handleUpdateOrderItems}
             isLineMode={isLineMode}
           />
         );
@@ -530,15 +549,10 @@ export default function App() {
       {/* Top Mobile Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.mist }]}>
         <View style={styles.headerLeft}>
-          <View style={[styles.headerLogo, { backgroundColor: colors.primary }]}>
-            <Text style={styles.headerLogoText}>
-              {(currentOrg?.name || 'SA').split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase()}
-            </Text>
-          </View>
+
           <View>
             <View style={styles.titleRow}>
               <Text style={[styles.headerOrgName, { color: colors.ink }]}>{currentOrg?.name || 'Organization'}</Text>
-              {isLoading && <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 4 }} />}
             </View>
             <Text style={[styles.headerRole, { color: colors.graphite }]}>
               {(currentUser?.role || 'STAFF').toUpperCase()} SESSION
@@ -547,6 +561,18 @@ export default function App() {
         </View>
 
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.refreshBtn, { backgroundColor: colors.steel, borderColor: colors.mist }]}
+            onPress={() => currentOrg?.id && syncStoreData(currentOrg.id)}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <RefreshCw size={14} color={colors.ink} />
+            )}
+          </TouchableOpacity>
+
           {/* SYNC DATA TO BACKEND BUTTON WITH BADGE */}
           <TouchableOpacity
             style={[
@@ -592,7 +618,9 @@ export default function App() {
       </View>
 
       {/* Active Screen View */}
-      <View style={styles.screenContainer}>{renderActiveScreen()}</View>
+      <View style={styles.screenContainer}>
+        {isLoading ? <SkeletonLoader isLineMode={isLineMode} /> : renderActiveScreen()}
+      </View>
 
       {/* Mobile Bottom Navigation Bar with Unified Lucide Icons */}
       <View style={[styles.bottomNav, { backgroundColor: colors.surface, borderColor: colors.mist }]}>
@@ -606,7 +634,7 @@ export default function App() {
             { id: 'reports', label: 'Reports', icon: TrendingUp, roles: ['owner', 'admin'] },
             { id: 'clients', label: 'Customers', icon: Users, roles: ['owner', 'admin', 'salesman'] },
             { id: 'tasks', label: 'Tasks', icon: CheckCircle2, roles: ['owner', 'admin', 'salesman', 'chef', 'delivery_boy'] },
-            { id: 'ledger', label: 'Ledger', icon: BookOpen, roles: ['owner', 'admin'] },
+            { id: 'ledger', label: 'Ledger', icon: BookOpen, roles: ['admin'] },
             { id: 'settings', label: 'Settings', icon: Settings, roles: ['owner', 'admin', 'salesman', 'chef', 'delivery_boy'] }
           ]
             .filter(item => item.roles.includes(currentUser?.role || 'owner'))
@@ -653,6 +681,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center' },
   headerOrgName: { fontSize: 13, fontWeight: 'bold' },
   headerRole: { fontSize: 8.5, fontFamily: 'monospace', marginTop: 1 },
+  refreshBtn: { width: 34, height: 34, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   syncBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   syncBtnInner: { flexDirection: 'row', alignItems: 'center' },
   syncBtnText: { fontSize: 11, fontWeight: 'bold', fontFamily: 'monospace' },

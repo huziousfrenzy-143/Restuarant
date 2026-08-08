@@ -195,6 +195,9 @@ const EMBEDDED_TENANT_MIGRATIONS: Record<string, string> = {
         due_at TIMESTAMPTZ NOT NULL,
         created_by VARCHAR(255) NOT NULL
     );
+  `,
+  '002_product_variants.sql': `
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS variants JSONB DEFAULT '[]'::jsonb;
   `
 };
 

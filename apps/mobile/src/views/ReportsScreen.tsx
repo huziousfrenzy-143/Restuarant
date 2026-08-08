@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share } fr
 import { Order, InventoryItem } from '@restaurant-saas/shared-schemas';
 import { LightColors, LineModeColors } from '../theme/colors';
 import { Download, TrendingUp, DollarSign, ShoppingBag, AlertTriangle, Utensils, Package } from 'lucide-react-native';
+import { exportToExcel } from '../utils/exportUtils';
 
 interface ReportsScreenProps {
   orders: Order[];
@@ -49,31 +50,21 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({ orders, inventory,
   const topProducts = Object.values(itemMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
   const lowStockCount = inventory.filter(i => toNum(i.current_qty) <= toNum(i.reorder_level)).length;
 
-  const handleExportCSVReport = async () => {
-    const header = 'Metric,Value\n';
-    const rows = [
-      `Total Gross Sales Revenue,${totalGrossRevenue.toFixed(2)}`,
-      `Net Subtotal,${totalSubtotal.toFixed(2)}`,
-      `Total Tax Collected,${totalTax.toFixed(2)}`,
-      `Total Discounts,${totalDiscount.toFixed(2)}`,
-      `Total Orders,${totalOrders}`,
-      `Completed Orders,${completedOrders.length}`,
-      `Dine-In Orders,${dineInCount}`,
-      `Takeaway Orders,${takeawayCount}`,
-      `Delivery Orders,${deliveryCount}`,
-      `Low Stock Alerts,${lowStockCount}`
-    ].join('\n');
+  const handleExportXLSXReport = async () => {
+    const data = [
+      { Metric: 'Total Gross Sales Revenue', Value: totalGrossRevenue },
+      { Metric: 'Net Subtotal', Value: totalSubtotal },
+      { Metric: 'Total Tax Collected', Value: totalTax },
+      { Metric: 'Total Discounts', Value: totalDiscount },
+      { Metric: 'Total Orders', Value: totalOrders },
+      { Metric: 'Completed Orders', Value: completedOrders.length },
+      { Metric: 'Dine-In Orders', Value: dineInCount },
+      { Metric: 'Takeaway Orders', Value: takeawayCount },
+      { Metric: 'Delivery Orders', Value: deliveryCount },
+      { Metric: 'Low Stock Alerts', Value: lowStockCount }
+    ];
 
-    const csvContent = header + rows;
-
-    try {
-      await Share.share({
-        message: csvContent,
-        title: 'Financial Report',
-      });
-    } catch (error: any) {
-      Alert.alert('Export Failed', error.message);
-    }
+    await exportToExcel(data, `Financial_Report_${Date.now()}`, 'Financial Report');
   };
 
   return (
@@ -88,10 +79,10 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({ orders, inventory,
           </View>
           <TouchableOpacity
             style={[styles.exportBtn, { backgroundColor: colors.primary }]}
-            onPress={handleExportCSVReport}
+            onPress={handleExportXLSXReport}
           >
             <Download size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-            <Text style={styles.exportBtnText}>EXPORT CSV</Text>
+            <Text style={styles.exportBtnText}>EXPORT XLSX</Text>
           </TouchableOpacity>
         </View>
 

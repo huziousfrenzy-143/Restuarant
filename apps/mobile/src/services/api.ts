@@ -76,11 +76,11 @@ export async function verifyOtpApi(email: string, otp: string, targetOrgId?: str
 }
 
 // Direct Login Fallback (POST /api/v1/auth/login)
-export async function loginStaffApi(email: string, targetOrgId?: string) {
+export async function loginStaffApi(email: string, password?: string, targetOrgId?: string) {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, targetOrgId })
+    body: JSON.stringify({ email, password: password || 'password123', targetOrgId })
   });
   const json = await res.json();
   if (!res.ok) {
@@ -164,6 +164,14 @@ export async function updateOrderStatusApi(orgId: string, orderId: string, statu
   return await fetchMobileJson<Order>(`/${orgId}/orders/${orderId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status })
+  });
+}
+
+// 8b. Update Order Items (PUT /api/v1/:orgId/orders/:id/items)
+export async function updateOrderItemsApi(orgId: string, orderId: string, items: any[]): Promise<Order> {
+  return await fetchMobileJson<Order>(`/${orgId}/orders/${orderId}/items`, {
+    method: 'PUT',
+    body: JSON.stringify({ items })
   });
 }
 

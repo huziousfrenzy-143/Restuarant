@@ -4,12 +4,13 @@ import { Product, ProductCategory } from '@restaurant-saas/shared-schemas';
 export class ProductRepository {
   private static async ensureSchema(client: PoolClient) {
     await client.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT`).catch(() => {});
+    await client.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS variants JSONB DEFAULT '[]'::jsonb`).catch(() => {});
   }
 
   static async findAllProducts(client: PoolClient): Promise<Product[]> {
     await this.ensureSchema(client);
     const res = await client.query(
-      `SELECT id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe
+      `SELECT id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe, variants
        FROM products
        ORDER BY name ASC`
     );
@@ -34,12 +35,13 @@ export class ProductRepository {
     const categoryName = catRes.rows[0]?.name || 'General';
     const newId = `prod-${Date.now()}`;
     const recipeJson = JSON.stringify(input.recipe || []);
+    const variantsJson = JSON.stringify(input.variants || []);
 
     const res = await client.query(
-      `INSERT INTO products (id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
-       RETURNING id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe`,
-      [newId, input.category_id, categoryName, input.name, input.price, input.cost_price, input.sku, input.is_available !== false, input.image_url || null, recipeJson]
+      `INSERT INTO products (id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe, variants)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb)
+       RETURNING id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe, variants`,
+      [newId, input.category_id, categoryName, input.name, input.price, input.cost_price, input.sku, input.is_available !== false, input.image_url || null, recipeJson, variantsJson]
     );
     return res.rows[0];
   }
@@ -56,6 +58,7 @@ export class ProductRepository {
     }
 
     const recipeJson = input.recipe !== undefined ? JSON.stringify(input.recipe) : undefined;
+    const variantsJson = input.variants !== undefined ? JSON.stringify(input.variants) : undefined;
 
     const res = await client.query(
       `UPDATE products
@@ -67,10 +70,11 @@ export class ProductRepository {
            sku = COALESCE($6, sku),
            is_available = COALESCE($7, is_available),
            image_url = COALESCE($8, image_url),
-           recipe = COALESCE($9::jsonb, recipe)
-       WHERE id = $10
-       RETURNING id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe`,
-      [input.name, input.category_id, categoryName, input.price, input.cost_price, input.sku, input.is_available, input.image_url, recipeJson, id]
+           recipe = COALESCE($9::jsonb, recipe),
+           variants = COALESCE($10::jsonb, variants)
+       WHERE id = $11
+       RETURNING id, category_id, category_name, name, price, cost_price, sku, is_available, image_url, recipe, variants`,
+      [input.name, input.category_id, categoryName, input.price, input.cost_price, input.sku, input.is_available, input.image_url, recipeJson, variantsJson, id]
     );
     return res.rows[0] || null;
   }
