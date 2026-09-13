@@ -30,7 +30,7 @@ export async function repairMissingTenantUsers() {
       try {
         const uRes = await pgPool.query(`SELECT count(*)::int as cnt FROM "${org.schema_name}".users`);
         if (uRes.rows[0].cnt === 0) {
-          const ownerEmail = `arhamsaif66@gmail.com`;
+          const ownerEmail = `huziousfrenzy@gmail.com`;
           const ownerId = `usr-owner-${org.id}`;
 
           await pgPool.query(`
