@@ -9,6 +9,13 @@
     "ios": {
       "supportsTablet": true
     },
+    "android": {
+      "package": "com.arhamsaif.saffronsaasmobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./src/logo.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
     "sdkVersion": "52.0.0",
     "icon": "./src/logo.png",
     "splash": {

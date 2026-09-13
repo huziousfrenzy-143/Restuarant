@@ -1,9 +1,16 @@
 import { Product, Order, InventoryItem, OrderStatus, Client, ProductCategory } from '@restaurant-saas/shared-schemas';
-import { saveAuthSession, clearAuthSession } from './storage';
+import { saveAuthSession, clearAuthSession, getAuthSession } from './storage';
 
 export const API_BASE_URL = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL ? process.env.EXPO_PUBLIC_API_URL : 'https://restuarants-api.vercel.app/api/v1').replace(/\/$/, '');
 
 let authToken: string | null = null;
+let isRefreshing = false;
+let refreshSubscribers: ((token: string | null) => void)[] = [];
+
+function onRefreshed(token: string | null) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
 
 export function setApiAuthToken(token: string | null) {
   authToken = token;
@@ -19,13 +26,72 @@ export async function fetchMobileJson<T>(endpoint: string, options?: RequestInit
     ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
   };
 
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       ...headers,
       ...(options?.headers as Record<string, string> || {})
     },
     ...options
   });
+
+  if (res.status === 401) {
+    const session = await getAuthSession();
+    if (session.refreshToken) {
+      if (isRefreshing) {
+        const newToken = await new Promise<string | null>((resolve) => {
+          refreshSubscribers.push(resolve);
+        });
+        if (newToken) {
+          headers.Authorization = `Bearer ${newToken}`;
+          res = await fetch(`${API_BASE_URL}${endpoint}`, {
+            headers: {
+              ...headers,
+              ...(options?.headers as Record<string, string> || {})
+            },
+            ...options
+          });
+        }
+      } else {
+        isRefreshing = true;
+        try {
+          const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: session.refreshToken })
+          });
+          
+          if (refreshRes.ok) {
+            const refreshJson = await refreshRes.json();
+            const newTokens = refreshJson.data;
+            if (newTokens?.accessToken) {
+              setApiAuthToken(newTokens.accessToken);
+              await saveAuthSession(newTokens.accessToken, newTokens.refreshToken || session.refreshToken, session.user, session.userOrgs);
+              onRefreshed(newTokens.accessToken);
+              
+              headers.Authorization = `Bearer ${newTokens.accessToken}`;
+              res = await fetch(`${API_BASE_URL}${endpoint}`, {
+                headers: {
+                  ...headers,
+                  ...(options?.headers as Record<string, string> || {})
+                },
+                ...options
+              });
+            } else {
+              onRefreshed(null);
+            }
+          } else {
+            await clearAuthSession();
+            setApiAuthToken(null);
+            onRefreshed(null);
+          }
+        } catch (error) {
+          onRefreshed(null);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+    }
+  }
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));

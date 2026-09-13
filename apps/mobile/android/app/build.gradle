@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.restaurantsaas.mobile'
+    namespace 'com.arhamsaif.saffronsaasmobile'
     defaultConfig {
-        applicationId 'com.restaurantsaas.mobile'
+        applicationId 'com.arhamsaif.saffronsaasmobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

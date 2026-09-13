@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Order, Client } from '@restaurant-saas/shared-schemas';
+import { Order, Client, Product, InventoryItem } from '@restaurant-saas/shared-schemas';
 
 export interface PendingSyncItem {
   id: string;
@@ -77,6 +77,24 @@ export async function saveLocalOrders(orders: Order[]): Promise<void> {
 
 export async function getLocalOrders(): Promise<Order[]> {
   return await getLocalItem<Order[]>(STORAGE_KEYS.ORDERS, []);
+}
+
+// Local Products Persistence
+export async function saveLocalProducts(products: Product[]): Promise<void> {
+  await saveLocalItem(STORAGE_KEYS.PRODUCTS, products);
+}
+
+export async function getLocalProducts(): Promise<Product[]> {
+  return await getLocalItem<Product[]>(STORAGE_KEYS.PRODUCTS, []);
+}
+
+// Local Inventory Persistence
+export async function saveLocalInventory(inventory: InventoryItem[]): Promise<void> {
+  await saveLocalItem(STORAGE_KEYS.INVENTORY, inventory);
+}
+
+export async function getLocalInventory(): Promise<InventoryItem[]> {
+  return await getLocalItem<InventoryItem[]>(STORAGE_KEYS.INVENTORY, []);
 }
 
 // Local Clients Persistence

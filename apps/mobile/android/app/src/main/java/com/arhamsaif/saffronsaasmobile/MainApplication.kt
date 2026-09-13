@@ -1,4 +1,4 @@
-package com.restaurantsaas.mobile
+package com.arhamsaif.saffronsaasmobile
 
 import android.app.Application
 import android.content.res.Configuration

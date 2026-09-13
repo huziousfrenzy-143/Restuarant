@@ -1,4 +1,4 @@
-package com.restaurantsaas.mobile
+package com.arhamsaif.saffronsaasmobile
 
 import android.os.Build
 import android.os.Bundle

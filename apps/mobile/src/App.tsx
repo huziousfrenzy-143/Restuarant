@@ -36,6 +36,10 @@ import {
   getLocalOrders,
   saveLocalClients,
   getLocalClients,
+  saveLocalProducts,
+  getLocalProducts,
+  saveLocalInventory,
+  getLocalInventory,
   getPendingSyncQueue,
   addPendingSyncItem,
   clearPendingSyncQueue,
@@ -111,9 +115,15 @@ export default function App() {
 
       const storedOrders = await getLocalOrders();
       const storedClients = await getLocalClients();
+      const storedProducts = await getLocalProducts();
+      const storedInventory = await getLocalInventory();
       const queue = await getPendingSyncQueue();
+      
       if (storedOrders.length > 0) setOrders(storedOrders);
       if (storedClients.length > 0) setClients(storedClients);
+      if (storedProducts.length > 0) setProducts(storedProducts);
+      if (storedInventory.length > 0) setInventory(storedInventory);
+      
       setPendingQueue(queue);
       
       setIsAuthLoading(false);
@@ -134,7 +144,10 @@ export default function App() {
 
       const freshQueue = await getPendingSyncQueue();
 
-      if (prods) setProducts(prods);
+      if (prods) {
+        setProducts(prods);
+        await saveLocalProducts(prods);
+      }
       
       if (ords) {
         const localCreatedOrders = freshQueue
@@ -149,7 +162,10 @@ export default function App() {
         await saveLocalOrders(mergedOrders);
       }
       
-      if (inv) setInventory(inv);
+      if (inv) {
+        setInventory(inv);
+        await saveLocalInventory(inv);
+      }
       
       if (clis) {
         const localCreatedClients = freshQueue
