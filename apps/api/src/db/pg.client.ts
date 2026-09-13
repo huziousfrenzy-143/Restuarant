@@ -25,7 +25,7 @@ export async function repairMissingTenantUsers() {
       if (!org.schema_name) continue;
 
       // Ensure tenant schema and tables exist
-      await applyMigrations(org.schema_name).catch(() => {});
+      await applyMigrations(org.schema_name).catch(() => { });
 
       try {
         const uRes = await pgPool.query(`SELECT count(*)::int as cnt FROM "${org.schema_name}".users`);
@@ -43,7 +43,7 @@ export async function repairMissingTenantUsers() {
             INSERT INTO public.users (id, org_id, name, email, password_hash, phone, role, is_active)
             VALUES ('${ownerId}', '${org.id}', '${org.name} Owner', '${ownerEmail}', '${defaultPasswordHash}', null, 'owner', true)
             ON CONFLICT (email) DO NOTHING;
-          `).catch(() => {});
+          `).catch(() => { });
 
           console.log(`[Self-Healing] Repaired missing owner user '${ownerEmail}' for organization '${org.name}' in schema '${org.schema_name}'.`);
         }
@@ -72,13 +72,13 @@ export async function initPgDatabase() {
     await applyPublicMigrations().catch(e => console.warn('[Migration Warning]', e.message));
 
     // Ensure public.users table has password_hash column
-    await pgPool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);`).catch(() => {});
+    await pgPool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);`).catch(() => { });
 
     // 2. Ensure Super Admin account is seeded into public.super_admin_users
-    const superAdminHash = hashPassword('password123');
+    const superAdminHash = hashPassword('!KKJSN(*$#KISmcs(*(@#!VBZ');
     await pgPool.query(
       `INSERT INTO public.super_admin_users (id, name, email, password_hash)
-       VALUES ('usr-super-admin', 'Super Admin Operator', 'arhamsaifofficial@gmail.com', $1)
+       VALUES ('usr-super-admin', 'Super Admin Operator', 'huziousfrenzy@gmail.com', $1)
        ON CONFLICT (id) DO UPDATE SET 
          name = EXCLUDED.name,
          email = EXCLUDED.email,
